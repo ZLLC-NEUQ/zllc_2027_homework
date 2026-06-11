@@ -146,7 +146,7 @@ void Class_Chariot::CAN_Chassis_Rx_Gimbal_Callback()
 
     // 获取云台坐标系和底盘坐标系的夹角（弧度制）
     Chassis_Angle = Motor_Yaw.Get_Now_Radian();
-    if (Chassis.Get_Chassis_Control_Type() == Chassis_Control_Type_SPIN)
+    if (Chassis.Get_Chassis_Control_Type() == Chassis_Control_Type_SPIN_Positive)
     {
         Offset_Angle = offset_k * Motor_Yaw.Get_Now_Omega_Radian();
     }
@@ -166,7 +166,7 @@ void Class_Chariot::CAN_Chassis_Rx_Gimbal_Callback()
     Chassis.Set_Chassis_Control_Type(chassis_control_type);
 
     // 底盘控制方案
-    if (Chassis.Get_Chassis_Control_Type() == Chassis_Control_Type_SPIN)
+    if (Chassis.Get_Chassis_Control_Type() == Chassis_Control_Type_SPIN_Positive)
     {
         chassis_omega = Math_Int_To_Float(tmp_omega, 0, 0xFF, -1 * 8.0f, 8.0f);
         Chassis.Set_Spin_Omega(chassis_omega);
@@ -331,7 +331,7 @@ void Class_Chariot::Control_Chassis()
         }
         if (DR16.Get_Left_Switch() == DR16_Switch_Status_UP) // 左上 小陀螺模式
         {
-            Chassis.Set_Chassis_Control_Type(Chassis_Control_Type_SPIN);
+            Chassis.Set_Chassis_Control_Type(Chassis_Control_Type_SPIN_Positive);
             chassis_omega = -Chassis.Get_Spin_Omega();
             if (DR16.Get_Right_Switch() == DR16_Switch_Status_DOWN) // 右下 小陀螺反向
             {
@@ -352,7 +352,7 @@ void Class_Chariot::Control_Chassis()
         // 键盘遥控器操作逻辑
         if (VT13.Get_Switch() == VT13_Switch_Status_Left)
         {
-            Chassis.Set_Chassis_Control_Type(Chassis_Control_Type_SPIN);
+            Chassis.Set_Chassis_Control_Type(Chassis_Control_Type_SPIN_Positive);
             chassis_omega = -Chassis.Get_Spin_Omega();
         }
         if (VT13.Get_Switch() == VT13_Switch_Status_Middle)
@@ -362,7 +362,7 @@ void Class_Chariot::Control_Chassis()
         }
         if (VT13.Get_Switch() == VT13_Switch_Status_Right)
         {
-            Chassis.Set_Chassis_Control_Type(Chassis_Control_Type_SPIN);
+            Chassis.Set_Chassis_Control_Type(Chassis_Control_Type_SPIN_Positive);
             chassis_omega = Chassis.Get_Spin_Omega();
         }
     }
@@ -405,7 +405,7 @@ void Class_Chariot::Control_Chassis()
             {
                 if (Chassis.Get_Chassis_Control_Type() == Chassis_Control_Type_FLLOW)
                 {
-                    Chassis.Set_Chassis_Control_Type(Chassis_Control_Type_SPIN);
+                    Chassis.Set_Chassis_Control_Type(Chassis_Control_Type_SPIN_Positive);
                     chassis_omega = Chassis.Get_Spin_Omega();
                 }
                 else
@@ -458,7 +458,7 @@ void Class_Chariot::Control_Chassis()
             {
                 if (Chassis.Get_Chassis_Control_Type() == Chassis_Control_Type_FLLOW)
                 {
-                    Chassis.Set_Chassis_Control_Type(Chassis_Control_Type_SPIN);
+                    Chassis.Set_Chassis_Control_Type(Chassis_Control_Type_SPIN_Positive);
                     chassis_omega = Chassis.Get_Spin_Omega();
                 }
                 else
@@ -598,7 +598,7 @@ void Class_Chariot::Control_Gimbal()
                 {
                     tmp_gimbal_yaw = MiniPC.Get_Rx_Yaw_Angle();
                     tmp_gimbal_pitch = MiniPC.Get_Rx_Pitch_Angle();
-                    if (Chassis.Get_Chassis_Control_Type() == Chassis_Control_Type_SPIN)
+                    if (Chassis.Get_Chassis_Control_Type() == Chassis_Control_Type_SPIN_Positive)
                     {
                         tmp_gimbal_yaw = MiniPC.Get_Rx_Yaw_Angle();
                         tmp_gimbal_pitch = MiniPC.Get_Rx_Pitch_Angle();
@@ -674,7 +674,7 @@ void Class_Chariot::Control_Gimbal()
                 {
                     tmp_gimbal_yaw = MiniPC.Get_Rx_Yaw_Angle();
                     tmp_gimbal_pitch = MiniPC.Get_Rx_Pitch_Angle();
-                    if (Chassis.Get_Chassis_Control_Type() == Chassis_Control_Type_SPIN)
+                    if (Chassis.Get_Chassis_Control_Type() == Chassis_Control_Type_SPIN_Positive)
                     {
                         tmp_gimbal_yaw = MiniPC.Get_Rx_Yaw_Angle();
                         tmp_gimbal_pitch = MiniPC.Get_Rx_Pitch_Angle();
@@ -1024,7 +1024,7 @@ void Class_Chariot::TIM_Calculate_PeriodElapsedCallback()
     JudgeReceiveData.Chassis_Gimbal_Diff = chassis_gimbal_diff;
 
     // 小陀螺 随动计算角速度
-    if (Chassis.Get_Chassis_Control_Type() == Chassis_Control_Type_SPIN)
+    if (Chassis.Get_Chassis_Control_Type() == Chassis_Control_Type_SPIN_Positive)
     {
         Chassis.Set_Target_Omega(Chassis.Get_Spin_Omega());
     }

@@ -167,7 +167,7 @@ public:
     // 裁判系统
     Class_Referee Referee;
     // 底盘
-    Class_Tricycle_Chassis Chassis;
+    Class_Steering_Wheel_Chassis Chassis;
 
     // 遥控器
     Class_DR16 DR16;
