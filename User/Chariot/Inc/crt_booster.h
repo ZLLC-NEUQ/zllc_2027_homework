@@ -24,8 +24,10 @@
 #include "dvc_djimotor.h"
 #include "dvc_minipc.h"
 
-/* Exported macros -----------------------------------------------------------*/
+#include "dvc_dwt.h"
 
+/* Exported macros -----------------------------------------------------------*/
+//暂时用不到
 extern uint16_t Shooter_Barrel_Heat_Limit; 
 extern uint16_t Shooter_Barrel_Cooling_Value;
 extern uint16_t tmp_heat;
@@ -57,7 +59,26 @@ enum Enum_Friction_Control_Type
     Friction_Control_Type_ENABLE,
 };
 
+/**
+ * @brief 裁判系统弹速更新状态
+ * 
+ */
+enum Enum_Referee_Bullet_Velocity_Updata_Status : uint8_t
+{
+    Referee_Bullet_Velocity_Updata_Status_DISABLE = 0,
+    Referee_Bullet_Velocity_Updata_Status_ENABLE,
+};
 
+/**
+ * @brief 发射模式选择
+ * 
+ */
+enum Enum_Shooter_Mode : uint8_t
+{
+    Normal,     // 正常发射
+    Aimer,      // 自瞄发射
+    Launcher,   // 部署发送
+};
 
 /**
  * @brief Specialized, 热量检测有限自动机
@@ -81,10 +102,21 @@ class Class_FSM_Antijamming : public Class_FSM
 {
 public:
     Class_Booster *Booster;
-
+    float Original_Angle;//  在卡弹反应状态读取的拨弹盘电机的角度（弧度制）
     void Reload_TIM_Status_PeriodElapsedCallback();
 };
 
+/**
+ * @brief Specialized,摩擦轮电机类
+ * 
+ */
+class Class_Fric_Motor : public Class_DJI_Motor_C620
+{
+public:
+    void TIM_PID_PeriodElapsedCallback();
+};
+
+//暂时用不到
 enum Enum_Booster_User_Control_Type
 {
     Booster_User_Control_Type_SINGLE=0,
@@ -185,118 +217,124 @@ enum Enum_Booster_User_Control_Type
 // };
 class Class_Booster
 {
+    
 public:
-    // 热量检测有限自动机
+    uint8_t Cmd_if_Fire = 0;
+    uint8_t Shoot_Flag = 0; //0关闭 1开启 测试发射机构
+    //热量检测有限自动机
     Class_FSM_Heat_Detect FSM_Heat_Detect;
     friend class Class_FSM_Heat_Detect;
-		uint16_t actual_bullet_num=0;
-    // 卡弹策略有限自动机
+    uint16_t actual_bullet_num=0;
+
+    //卡弹策略有限自动机
     Class_FSM_Antijamming FSM_Antijamming;
     friend class Class_FSM_Antijamming;
 
-    // 裁判系统
+    //裁判系统
     Class_Referee *Referee;
+    //上位机
+    Class_MiniPC *MiniPC;
 
-    // 拨弹盘电机
-    Class_DJI_Motor_C610 Motor_Driver;
+    //拨弹盘电机
+    Class_DJI_Motor_C620 Motor_Driver;
+    KalmanFilter Kf_Omega;
 
-    // 摩擦轮电机左
-    Class_DJI_Motor_C610 Motor_Friction_Left;
-    // 摩擦轮电机右
-    Class_DJI_Motor_C610 Motor_Friction_Right;
-    // 摩擦轮电机下
-    Class_DJI_Motor_C610 Motor_Friction_Down;
+    //摩擦轮电机左
+    Class_DJI_Motor_C620 Motor_Friction_Left;
+    //摩擦轮电机右
+    Class_DJI_Motor_C620 Motor_Friction_Right;
+    //4*摩擦轮
+    Class_Fric_Motor Fric[4];
 
-    Class_PID Bullet_Speed;
-    /**********************************/
-    // 热量预测与控制
-    float Heat_Local = 0.0f; // 本地累加热量
-    float Heat_Max = 400.0f;
-    float Cooling_Value = 10.0f; // 裁判冷却值
-
-    // 收缩参数（可调）
-    float Tau0 = 0.45f;         // 提前收缩时间
-    float Tau1 = 0.0965f;          // 收缩陡度
-    float Recover_Ratio = 0.85f; // 恢复比例
-
-    bool Overheat_Flag = false;
-
-    // 射速相关
-    float Base_Frequency = 15.0f; // f0
-    float Balance_Frequency = 0.0f;
-
-    float smax = 170.f;
-    float cools = 7.0f;
-    /**********************************/
     void Init();
 
     inline float Get_Default_Driver_Omega();
     inline float Get_Friction_Omega();
     inline float Get_Friction_Omega_Threshold();
+    inline uint16_t Get_Heat();
+    
 
     inline Enum_Booster_Control_Type Get_Booster_Control_Type();
     inline Enum_Friction_Control_Type Get_Friction_Control_Type();
+    inline Enum_Shooter_Mode Get_Shooter_Mode();
 
     inline void Set_Booster_Control_Type(Enum_Booster_Control_Type __Booster_Control_Type);
     inline void Set_Friction_Control_Type(Enum_Friction_Control_Type __Friction_Control_Type);
+    inline void Set_Shooter_Mode(Enum_Shooter_Mode __Shooter_Mode);
     inline void Set_Friction_Omega(float __Friction_Omega);
     inline void Set_Driver_Omega(float __Driver_Omega);
-    inline void Set_Target_Drvier_Angle(float __Driver_Angle);
-    inline void Set_Tau0(float __Tau0);
-    inline void Set_Tau1(float __Tau1);
+    // inline void Set_Booster_Type(Enum_Booster_Type __Booster_Type);
+    inline void Set_Referee_Bullet_Velocity(float __Referee_Bullet_Velocity);
+    inline void Set_Heat(uint16_t __Heat);
+    inline void Set_Cooling_Value(uint16_t __Cooling_Value);
 
+    void TIM_Adjust_Bullet_Velocity_PeriodElapsedCallback();
     void TIM_Calculate_PeriodElapsedCallback();
-    void Output();
-
+	void Output();
+	//M61无，为了不报错保留	
     Enum_Booster_User_Control_Type Booster_User_Control_Type = Booster_User_Control_Type_SINGLE;
-
 protected:
-    // 初始化相关常量
+    //初始化相关常量
 
-    // 常量
+    //常量
+    //热量上限值，从裁判系统读取，否则默认为200
+    uint16_t Heat_Max = 200;
+    //热量冷却值,从裁判系统读取，否则默认为24
+    uint16_t Cooling_Value = 24;
+    //拨弹盘堵转扭矩阈值, 超出被认为卡弹
+    uint16_t Driver_Torque_Threshold = 8500;
+    //摩擦轮单次判定发弹阈值, 超出被认为发射子弹
+    uint16_t Friction_Torque_Threshold = 3000;
+    //摩擦轮速度判定发弹阈值, 超出则说明已经开机
+    float Friction_Omega_Threshold = 200;
 
-    // 拨弹盘堵转扭矩阈值, 超出被认为卡弹
-    uint16_t Driver_Torque_Threshold = 6000;
-    // 摩擦轮单次判定发弹阈值, 超出被认为发射子弹
-    uint16_t Friction_Torque_Threshold = 1900;
-    // 摩擦轮速度判定发弹阈值, 超出则说明已经开机
-    float Friction_Omega_Threshold = 600;
+    //内部变量
+    uint16_t Heat;
+    float shoot_time = 0.f;
+    float ShootTime = 0.f;
+    float shoot_speed = 0.f;
+    float Now_Angle = 0.f;
+    //读变量
 
-    // 内部变量
-    uint8_t shoot_time = 0;
-    float ShootTime = 0;
-    float shoot_speed;
-    float Heat_Consumption = 10.0f;
+    //裁判系统回传的弹速
+    float Referee_Bullet_Velocity = 0.0f;
+    float Pre_Referee_Bullet_Velocity = 0.0f;
+    Enum_Referee_Bullet_Velocity_Updata_Status Referee_Bullet_Velocity_Updata_Status = Referee_Bullet_Velocity_Updata_Status_DISABLE;
+    //拨弹盘默认速度, 一圈八发子弹, 此速度下与冷却均衡
+    float Default_Driver_Omega = -2.0f * PI;
 
-    // 读变量
+    //写变量
 
-    // 拨弹盘默认速度
-    float Default_Driver_Omega = 2.5f * 2.0f * PI / 9.0f * 25.f;
-
-    // 写变量
-
-    // 发射机构状态
-    Enum_Booster_Control_Type Booster_Control_Type = Booster_Control_Type_DISABLE;
+    //发射机构状态
+    Enum_Booster_Control_Type Booster_Control_Type = Booster_Control_Type_CEASEFIRE;
     Enum_Friction_Control_Type Friction_Control_Type = Friction_Control_Type_DISABLE;
-    // 摩擦轮角速度
-    float Friction_Omega = 1000.0f;
-    float Target_Bullet_Speed = 23.5f;
-    // 拨弹盘实际的目标速度
-    float Driver_Omega = 2.0f * PI * 2.5f ;
-    // 拨弹轮目标绝对角度 加圈数
+    Enum_Shooter_Mode Shooter_Mode = Normal;
+    // Enum_Booster_Type Booster_Type;
+    //摩擦轮角速度
+    float Friction_Omega = 650.0f;
+    // 12m/s 外级摩擦轮
+    int16_t Fric_High_Rpm_12m_s = 3750;
+    // 12m/s 内级摩擦轮
+    int16_t Fric_Low_Rpm_12m_s = 2800;      
+    // 16m/s 外级摩擦轮
+    int16_t Fric_High_Rpm_16m_s = 5050;//5100;
+    // 16m/s 内级摩擦轮
+    int16_t Fric_Low_Rpm_16m_s = 4300;//4250;
+    // 弹速调整值 
+    int16_t Fric_Transform_Rpm = 100;
+    //拨弹盘实际的目标速度, 一圈八发子弹
+    float Driver_Omega = -2.0f * PI;
+    //拨弹轮目标绝对角度 加圈数
     float Driver_Angle = 0.0f;
-    // 读写变量
+    
+    //读写变量
 
-    // 热量预测时间 τ
-    float τ = 0.0f;
-    // 内部函数
+    //内部函数
+
 };
 
 /* Exported variables --------------------------------------------------------*/
-void Class_Booster::Set_Target_Drvier_Angle(float __Driver_Angle)
-{
-    Driver_Angle = __Driver_Angle;
-}
+
 /* Exported function declarations --------------------------------------------*/
 
 /**
@@ -390,21 +428,60 @@ void Class_Booster::Set_Driver_Omega(float __Driver_Omega)
 }
 
 /**
- * @brief 设定时间常量T0
+ * @brief 
  * 
  */
-void Class_Booster::Set_Tau0(float __Tau0)
+uint16_t Class_Booster::Get_Heat()
 {
-    Tau0 == __Tau0;
+    return (Heat);
 }
 
 /**
- * @brief 设定时间常量T1
+ * @brief 
  * 
  */
-void Class_Booster::Set_Tau1(float __Tau1)
+void Class_Booster::Set_Heat(uint16_t __Heat)
 {
-    Tau1 == __Tau1;
+    Heat = __Heat;
+}
+
+/**
+ * @brief 设定发射模式
+ * 
+ * @param __Shooter_Mode 
+ */
+void Class_Booster::Set_Shooter_Mode(Enum_Shooter_Mode __Shooter_Mode)
+{
+    Shooter_Mode = __Shooter_Mode;
+}
+
+/**
+ * @brief 获得发射模式状态
+ * 
+ * @return Enum_Shooter_Mode 
+ */
+Enum_Shooter_Mode Class_Booster::Get_Shooter_Mode()
+{
+    return (Shooter_Mode);
+}
+
+/**
+ * @brief 设定裁判系统回传弹速
+ * 
+ * @param __Referee_Bullet_Velocity 回传弹速
+ */
+void Class_Booster::Set_Referee_Bullet_Velocity(float __Referee_Bullet_Velocity)
+{
+    Referee_Bullet_Velocity = __Referee_Bullet_Velocity;
+}
+
+/**
+ * @brief 
+ * 
+ */
+void Class_Booster::Set_Cooling_Value(uint16_t __Cooling_Value)
+{
+    Cooling_Value = __Cooling_Value;
 }
 
 #endif

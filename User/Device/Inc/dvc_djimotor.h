@@ -123,6 +123,7 @@ struct Struct_DJI_Motor_Data
     float Now_Radian;   //输出轴多圈角度（弧度制）
     float Now_Omega_Radian; //输出轴角速度（弧度制）
     float Now_Omega_Angle;  //输出轴角速度（角度制）
+    int16_t Now_Omega_Rpm; //输出轴角速度（RPM）
     float Now_Torque;
     float Now_Temperature;
     uint32_t Pre_Encoder;
@@ -422,6 +423,7 @@ public:
     inline void Set_Target_Radian(float __Target_Radian);
     inline void Set_Target_Omega_Angle(float __Target_Omega_Angle);
     inline void Set_Target_Omega_Radian(float __Target_Omega_Radian);
+    inline void Set_Target_Omega_Rpm(int16_t __Target_Omega_Rpm);
     inline void Set_Target_Torque(float __Target_Torque);
     inline void Set_Transform_Radian(float __Transform_Radian);
     inline void Set_Transform_Radian_Omega(float __Transform_Radian_Omega);		
@@ -489,6 +491,8 @@ protected:
     float Target_Radian = 0.0f;
     //目标的速度, rad/s
     float Target_Omega_Radian = 0.0f;
+    //目标的速度, rpm
+    int16_t Target_Omega_Rpm = 0;
     //目标的扭矩, 直接采用反馈值
     float Target_Torque = 0.0f;		
     //输出量
@@ -1259,6 +1263,16 @@ void Class_DJI_Motor_C620::Set_Target_Omega_Radian(float __Target_Omega_Radian)
 void Class_DJI_Motor_C620::Set_Target_Omega_Angle(float __Target_Omega_Angle)
 {
     Target_Omega_Angle = __Target_Omega_Angle;
+}
+
+/**
+ * @brief 设定目标的速度, rpm
+ *
+ * @param __Target_Omega 目标的速度, rpm
+ */
+void Class_DJI_Motor_C620::Set_Target_Omega_Rpm(int16_t __Target_Omega_Rpm)
+{
+    Target_Omega_Rpm = __Target_Omega_Rpm;
 }
 
 /**

@@ -46,6 +46,10 @@
 #define USE_VT13
 //#define USE_DR16
 
+//发射机构选择
+// #define Single_Friction
+#define Double_Friction
+
 /* 兵种/底盘类型选择*/
 // #define AGV      //舵轮底盘
 
