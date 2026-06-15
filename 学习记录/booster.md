@@ -15,4 +15,4 @@
 ##### 保留 RTE 中的 DSP 组件（重新勾选 CMSIS → DSP），确保库实现被正确链接。
 
 ##### 删除工程自带的重复 DSP 头文件路径：在 Options for Target → C/C++ → Include Paths 中移除 ./Middlewares/ST/ARM/DSP/Inc
-#### 2.主要是在djimotor.h加了个inline 关于rpm的；深化了卡弹策略。
+#### 2.主要是在djimotor.h加了个inline 关于rpm的；深化了卡弹策略；在config里面加了单级摩擦轮和双极摩擦轮。
