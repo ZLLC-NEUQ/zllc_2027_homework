@@ -250,7 +250,7 @@ public:
     Enum_Referee_UI_Refresh_Status Referee_UI_Refresh_Status = Referee_UI_Refresh_Status_DISABLE;
     Enum_Booster_User_Control_Type Booster_User_Control_Type = Booster_User_Control_Type_SINGLE;
     Enum_MiniPC_Type MiniPC_Type = MiniPC_Type_Nomal;
-		Enum_Antispin_Type Antispin_Type=Antispin_On;
+	//Enum_Antispin_Type Antispin_Type=Antispin_On;
 		
     // 底盘云台通讯数据
     float Gimbal_Tx_Pitch_Angle = 0;

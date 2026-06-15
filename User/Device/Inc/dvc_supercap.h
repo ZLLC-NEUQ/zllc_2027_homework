@@ -32,7 +32,15 @@ enum Enum_Supercap_Status
     Supercap_Status_DISABLE = 0,
     Supercap_Status_ENABLE,
 };
-
+/**
+ * @brief 超电开关
+ *
+ */
+enum Enum_Supercap_Mode : uint8_t
+{
+    Supercap_DISABLE = 0,
+    Supercap_ENABLE,
+};
 enum Enum_Supercap_Control_Status : uint8_t
 {
     Supercap_Control_Status_ENABLE = 0,
@@ -109,12 +117,15 @@ public:
     inline float Get_Supercap_Buffer_Power();
     inline float Get_Supercap_Charge_Percentage();
     inline float Get_Chassis_Device_LimitPower();
+    inline Enum_Supercap_Mode Get_Supercap_Mode();
     inline void Set_Referee_BufferPower(float __Referee_BufferPower);
     inline void Set_Referee_MaxPower(float __Referee_MaxPower);
     inline float Get_Supercap_Referee_MaxPower();
     inline void Set_PowerLimit_Type(Enum_PowerLimit_Type __PowerLimit_Type);
     inline void Set_Supercap_Usage_Stratage(Enum_Supercap_Usage_Stratage __Supercap_Usage_Stratage);
 	inline void Set_Power_Cale_Count(float __Power);
+    inline float Get_Totol_Energy();
+    inline void Set_Supercap_Mode(Enum_Supercap_Mode __Supercap_Mode);
     void CAN_RxCpltCallback(uint8_t *Rx_Data);
     void UART_RxCpltCallback(uint8_t *Rx_Data);
 	void Get_Referee_MaxPower();
@@ -151,6 +162,8 @@ protected:
     float Referee_MaxPower;
     //超级电容状态
     Enum_Supercap_Status Supercap_Status = Supercap_Status_DISABLE;
+    Enum_Supercap_Mode Supercap_Mode = Supercap_DISABLE;
+
     //超级电容使用策略
     Enum_Supercap_Usage_Stratage Supercap_Usage_Stratage = Supercap_Usage_Stratage_Referee_BufferPower;
     //超级电容当前充放电状态
@@ -210,6 +223,20 @@ float Class_Supercap::Get_Supercap_Buffer_Power()
 {
     return (Data.Supercap_Buffer_Power);
 }
+
+float Class_Supercap::Get_Totol_Energy()
+{
+    return (Totol_Energy);
+}
+void Class_Supercap::Set_Supercap_Mode(Enum_Supercap_Mode __Supercap_Mode)
+{
+    Supercap_Mode = __Supercap_Mode;
+}
+Enum_Supercap_Mode Class_Supercap::Get_Supercap_Mode()
+{
+    return(Supercap_Mode);
+}
+
 /**
  * @brief 获取存储的能量
  *
