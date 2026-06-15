@@ -162,7 +162,10 @@ void Chassis_Device_CAN2_Callback(Struct_CAN_Rx_Buffer *CAN_RxMessage)
                 chariot.Chassis.Set_Chassis_Control_Type(Chassis_Control_Type_DISABLE);
             }       
         }
-        break;	 
+        break;	
+         case (0x67): // 超电接收
+            chariot.Chassis.Supercap.CAN_RxCpltCallback(CAN_RxMessage->Data);
+            break;
     }
 }
 #endif
@@ -170,7 +173,21 @@ void Chassis_Device_CAN2_Callback(Struct_CAN_Rx_Buffer *CAN_RxMessage)
 #ifdef CHASSIS
 void Chassis_Device_CAN3_Callback(Struct_CAN_Rx_Buffer *CAN_RxMessage)
 {
-
+    switch (CAN_RxMessage->Header.Identifier)
+    {
+        case (0xD1):
+            chariot.Chassis.Motor_Steer[0].MA600_Data_Process(CAN_RxMessage);
+            break;
+        case (0xD2):
+            chariot.Chassis.Motor_Steer[1].MA600_Data_Process(CAN_RxMessage);
+            break;
+        case (0xD3):
+            chariot.Chassis.Motor_Steer[2].MA600_Data_Process(CAN_RxMessage);
+            break;
+        case (0xD4):
+            chariot.Chassis.Motor_Steer[3].MA600_Data_Process(CAN_RxMessage);
+            break;
+    }
 }
 #endif
 
