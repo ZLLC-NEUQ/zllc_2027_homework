@@ -250,9 +250,12 @@ void Class_Booster::Init()
     Motor_Friction_Right.PID_Omega.Init(150.0f, 4.0f, 0.2f, 0.0f, 2000.0f, Motor_Friction_Right.Get_Output_Max());
     Motor_Friction_Right.Init(&hfdcan1, DJI_Motor_ID_0x201, DJI_Motor_Control_Method_OMEGA, 1.0f);
 
-
+    // 摩擦轮电机下
+    Motor_Friction_Down.PID_Omega.Init(100.0f, 0.0f, 0.1f, 0.0f, 3000.0f, Motor_Friction_Down.Get_Output_Max());
+    Motor_Friction_Down.Init(&hfdcan1, DJI_Motor_ID_0x203, DJI_Motor_Control_Method_OMEGA, 1.0f);
 }
 
+uint8_t Swtich_To_Angle_Control_Flag = 0;
 void Class_Booster::Output()
 {
     switch (Booster_Control_Type)
@@ -263,6 +266,7 @@ void Class_Booster::Output()
         Motor_Driver.Set_DJI_Motor_Control_Method(DJI_Motor_Control_Method_OPENLOOP);
         Motor_Friction_Left.Set_DJI_Motor_Control_Method(DJI_Motor_Control_Method_OMEGA);
         Motor_Friction_Right.Set_DJI_Motor_Control_Method(DJI_Motor_Control_Method_OMEGA);
+        Motor_Friction_Down.Set_DJI_Motor_Control_Method(DJI_Motor_Control_Method_OMEGA);
 
         // 关闭摩擦轮
         Set_Friction_Control_Type(Friction_Control_Type_DISABLE);
@@ -271,10 +275,12 @@ void Class_Booster::Output()
         Motor_Driver.PID_Omega.Set_Integral_Error(0.0f);
         Motor_Friction_Left.PID_Angle.Set_Integral_Error(0.0f);
         Motor_Friction_Right.PID_Angle.Set_Integral_Error(0.0f);
+        Motor_Friction_Down.PID_Angle.Set_Integral_Error(0.0f);
 
         Motor_Driver.Set_Out(0.0f);
         Motor_Friction_Left.Set_Target_Omega_Radian(0.0f);
         Motor_Friction_Right.Set_Target_Omega_Radian(0.0f);
+        Motor_Friction_Down.Set_Target_Omega_Radian(0.0f);
     }
     break;
     case (Booster_Control_Type_CEASEFIRE):
@@ -331,6 +337,7 @@ void Class_Booster::Output()
         Motor_Driver.Set_DJI_Motor_Control_Method(DJI_Motor_Control_Method_OMEGA);
         Motor_Friction_Left.Set_DJI_Motor_Control_Method(DJI_Motor_Control_Method_OMEGA);
         Motor_Friction_Right.Set_DJI_Motor_Control_Method(DJI_Motor_Control_Method_OMEGA);
+        Motor_Friction_Down.Set_DJI_Motor_Control_Method(DJI_Motor_Control_Method_OMEGA);
 
         if (Referee->Get_Booster_17mm_1_Heat() + 30 < Referee->Get_Booster_17mm_1_Heat_Max())
         {
@@ -350,11 +357,13 @@ void Class_Booster::Output()
 
         Motor_Friction_Left.Set_Target_Omega_Radian(Friction_Omega);
         Motor_Friction_Right.Set_Target_Omega_Radian(-Friction_Omega);
+        Motor_Friction_Down.Set_Target_Omega_Radian(Friction_Omega);
     }
     else
     {
         Motor_Friction_Left.Set_Target_Omega_Radian(0.0f);
         Motor_Friction_Right.Set_Target_Omega_Radian(0.0f);
+        Motor_Friction_Down.Set_Target_Omega_Radian(0.0f);
     }
 }
 
@@ -374,6 +383,7 @@ void Class_Booster::TIM_Calculate_PeriodElapsedCallback()
     Motor_Driver.TIM_PID_PeriodElapsedCallback();
     Motor_Friction_Left.TIM_PID_PeriodElapsedCallback();
     Motor_Friction_Right.TIM_PID_PeriodElapsedCallback();
+    Motor_Friction_Down.TIM_PID_PeriodElapsedCallback();
 }
 
 /************************ COPYRIGHT(C) USTC-ROBOWALKER **************************/
