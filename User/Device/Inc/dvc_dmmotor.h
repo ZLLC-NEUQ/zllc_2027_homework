@@ -79,12 +79,21 @@ enum Enum_DM_Motor_Control_Method
 {
     DM_Motor_Control_Method_MIT_POSITION = 0,
     DM_Motor_Control_Method_MIT_OMEGA,
-    DM_Motor_Control_Method_MIT_ANGLE,
+    DM_Motor_Control_Method_MIT_TORQUE,
     DM_Motor_Control_Method_POSITION_OMEGA,
     DM_Motor_Control_Method_OMEGA,
-    DM_Motor_Control_Method_MIT_IMU_Angle,
-    DM_Motor_Control_Method_MIT_OPENLOOP
 };
+/**
+ * @brief 达妙电机的控制算法/方式
+ *
+ */
+enum Enum_DM_Motor_Control_Alg
+{
+    DM_Motor_DISANLE,
+    DM_PID_Omega,
+    DM_PID_Angle,
+};
+
 /**
  * @brief 达妙电机源数据
  *
@@ -149,6 +158,8 @@ public:
     inline float Get_MIT_K_D();
     inline float Get_Target_Angle();
     inline float Get_Target_Omega();
+    inline float Get_Transform_Angle();
+    inline float Get_Transform_Omega();
     inline float Get_Target_Torque();
     inline float Get_Out();
     
@@ -158,6 +169,8 @@ public:
     inline void Set_MIT_K_D(float __MIT_K_D);
     inline void Set_Target_Angle(float __Target_Angle);
     inline void Set_Target_Omega(float __Target_Omega);
+    inline void Set_Transform_Angle(float __Transform_Angle);
+    inline void Set_Transform_Omega(float __Transform_Omega);
     inline void Set_Target_Torque(float __Target_Torque);
     inline void Set_Out(float __Out);
 	inline void Limit_Out();
@@ -211,6 +224,8 @@ protected:
     Enum_DM_Motor_Control_Status DM_Motor_Control_Status = DM_Motor_Control_Status_DISABLE;
     //电机控制方式
     Enum_DM_Motor_Control_Method DM_Motor_Control_Method = DM_Motor_Control_Method_MIT_POSITION;
+     //电机的控制算法
+    Enum_DM_Motor_Control_Alg DM_Motor_Control_Alg = DM_PID_Omega;
     //MIT的Kp值, 0~500, 空载6, 位置控制需要
     float MIT_K_P = 0.0f;
     //MIT的Kd值, 0~5, 空载0.2, 位置和速度控制需要
@@ -221,6 +236,17 @@ protected:
     float Target_Omega = 0.0f;
     //目标的扭矩
     float Target_Torque = 0.0f;
+  //要输出的角度
+    float Output_Angle  = 0.0f;
+    //要输出的速度
+    float Output_Omega  = 0.0f;
+    //输出的扭矩
+    float Output_Torque = 0.0f;
+
+    //PID角度
+    float Transform_Angle  = 0.0f;
+    //PID速度
+    float Transform_Omega  = 0.0f;
 
     //内部函数
 
@@ -341,6 +367,25 @@ float Class_DM_Motor_J4310::Get_Target_Omega()
 {
     return (Target_Omega);
 }
+/**
+ * @brief 获取当前角度
+ *
+ * @return float 
+ */
+inline float Class_DM_Motor_J4310::Get_Transform_Angle()
+{
+  return (Transform_Angle);
+}
+
+/**
+ * @brief 获取当前角速度
+ *
+ * @return float 
+ */
+inline float Class_DM_Motor_J4310::Get_Transform_Omega()
+{
+  return (Transform_Omega);
+}
 
 /**
  * @brief 获取目标的扭矩
@@ -421,7 +466,25 @@ void Class_DM_Motor_J4310::Set_Target_Omega(float __Target_Omega)
 {
     Target_Omega = __Target_Omega;
 }
+/**
+ * @brief 设定当前角度
+ *
+ * @param __Target_Torque 
+ */
+inline void Class_DM_Motor_J4310::Set_Transform_Angle(float __Transform_Angle)
+{
+    Transform_Angle = __Transform_Angle;
+}
 
+/**
+ * @brief 设定当前角速度
+ *
+ * @param __Target_Torque 
+ */
+inline void Class_DM_Motor_J4310::Set_Transform_Omega(float __Transform_Omega)
+{
+    Transform_Omega = __Transform_Omega;
+}
 /**
  * @brief 设定目标的扭矩
  *

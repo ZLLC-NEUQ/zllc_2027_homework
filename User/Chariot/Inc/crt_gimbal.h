@@ -18,6 +18,7 @@
 #include "dvc_minipc.h"
 #include "dvc_imu.h"
 #include "dvc_lkmotor.h"
+#include "dvc_dmmotor.h"
 
 /* Exported macros -----------------------------------------------------------*/
 
@@ -34,7 +35,6 @@ enum Enum_Gimbal_Control_Type :uint8_t
     Gimbal_Control_Type_NORMAL,
     Gimbal_Control_Type_MINIPC,
 };
-
 /**
  * @brief Specialized, yaw轴电机类
  *
@@ -44,13 +44,13 @@ class Class_Gimbal_Yaw_Motor_GM6020 : public Class_DJI_Motor_GM6020
 public:
     //陀螺仪获取云台角速度
     Class_IMU *IMU;
- Class_Filter_Fourier filtered_target_angle;
+
     inline float Get_Trer_Rad_Yaw();
     inline float Get_True_Gyro_Yaw();
     inline float Get_True_Angle_Yaw();
 
     void Transform_Angle();
-    void Disable();
+
     void TIM_PID_PeriodElapsedCallback();
 
 protected:
@@ -87,36 +87,32 @@ float Class_Gimbal_Yaw_Motor_GM6020::Get_True_Angle_Yaw()
 }
 
 /**
- * @brief Specialized, pitch轴电机类
+ * @brief Specialized, yaw轴电机类
  *
  */
-class Class_Gimbal_Pitch_Motor_GM6020 : public Class_DJI_Motor_GM6020
+class Class_Gimbal_Yaw_Motor_LK : public Class_LK_Motor
 {
 public:
     //陀螺仪获取云台角速度
-    Class_IMU* IMU;
-
-
-    inline float Get_True_Rad_Pitch();
-    inline float Get_True_Gyro_Pitch();
-    inline float Get_True_Angle_Pitch();
+    Class_IMU *IMU;
+ Class_Filter_Fourier filtered_target_angle;
+    inline float Get_True_Rad_Yaw();
+    inline float Get_True_Gyro_Yaw();
+    inline float Get_True_Angle_Yaw();
 
     void Transform_Angle();
     void Disable();
     void TIM_PID_PeriodElapsedCallback();
 
 protected:
-    //初始化相关变量
+    //初始化相关常量
 
     //常量
 
-    // 重力补偿
-    float Gravity_Compensate = 0.0f;
-
     //内部变量
-    float True_Rad_Pitch = 0.0f;
-    float True_Angle_Pitch = 0.0f;
-    float True_Gyro_Pitch = 0.0f;
+    float True_Rad_Yaw = 0.0f;
+    float True_Angle_Yaw = 0.0f;
+    float True_Gyro_Yaw = 0.0f;
     //读变量
 
     //写变量
@@ -126,27 +122,74 @@ protected:
     //内部函数
 };
 
-float Class_Gimbal_Pitch_Motor_GM6020::Get_True_Rad_Pitch()
+float Class_Gimbal_Yaw_Motor_LK::Get_True_Rad_Yaw()
 {
-    return (True_Rad_Pitch);
+    return (True_Rad_Yaw);
+} 
+
+float Class_Gimbal_Yaw_Motor_LK::Get_True_Gyro_Yaw()
+{
+    return (True_Gyro_Yaw);
 }
 
-float Class_Gimbal_Pitch_Motor_GM6020::Get_True_Angle_Pitch()
+float Class_Gimbal_Yaw_Motor_LK::Get_True_Angle_Yaw()
 {
-    return (True_Angle_Pitch);
+    return (True_Angle_Yaw);
 }
-
-float Class_Gimbal_Pitch_Motor_GM6020::Get_True_Gyro_Pitch()
-{
-    return (True_Gyro_Pitch);
-}
-
 
 /**
- * @brief Specialized, pitch轴电机类
+ * @brief Specialized, yaw轴电机类
  *
  */
-class Class_Gimbal_Pitch_Motor_LK6010 : public Class_LK_Motor
+class Class_Gimbal_Yaw_Motor_GM6020 : public Class_DJI_Motor_GM6020
+{
+public:
+    //陀螺仪获取云台角速度
+    Class_IMU *IMU;
+
+    inline float Get_Trer_Rad_Yaw();
+    inline float Get_True_Gyro_Yaw();
+    inline float Get_True_Angle_Yaw();
+
+    void Transform_Angle();
+
+    void TIM_PID_PeriodElapsedCallback();
+
+protected:
+    //初始化相关常量
+
+    //常量
+
+    //内部变量
+    float True_Rad_Yaw = 0.0f;
+    float True_Angle_Yaw = 0.0f;
+    float True_Gyro_Yaw = 0.0f;
+    //读变量
+
+    //写变量
+
+    //读写变量
+
+    //内部函数
+};
+
+float Class_Gimbal_Yaw_Motor_GM6020::Get_Trer_Rad_Yaw()
+{
+    return (True_Rad_Yaw);
+} 
+
+float Class_Gimbal_Yaw_Motor_GM6020::Get_True_Gyro_Yaw()
+{
+    return (True_Gyro_Yaw);
+}
+
+float Class_Gimbal_Yaw_Motor_GM6020::Get_True_Angle_Yaw()
+{
+    return (True_Angle_Yaw);
+}
+
+
+class Class_Gimbal_Pitch_Motor_J4310 : public Class_DM_Motor_J4310
 {
 public:
     //陀螺仪获取云台角速度
@@ -181,22 +224,21 @@ float Gravity_Compensate = 0.0f;
     //内部函数
 };
 
-float Class_Gimbal_Pitch_Motor_LK6010::Get_True_Rad_Pitch()
+float Class_Gimbal_Pitch_Motor_J4310::Get_True_Rad_Pitch()
 {
     return (True_Rad_Pitch);
 }
 
-float Class_Gimbal_Pitch_Motor_LK6010::Get_True_Angle_Pitch()
+float Class_Gimbal_Pitch_Motor_J4310::Get_True_Angle_Pitch()
 {
     return (True_Angle_Pitch);
 }
 
-float Class_Gimbal_Pitch_Motor_LK6010::Get_True_Gyro_Pitch()
+float Class_Gimbal_Pitch_Motor_J4310::Get_True_Gyro_Pitch()
 {
     return (True_Gyro_Pitch);
 
 }
-
 /**
  * @brief Specialized, 云台类
  *
@@ -212,14 +254,14 @@ public:
 
     /*后期yaw pitch这两个类要换成其父类，大疆电机类*/
 
-    // yaw轴电机
+    // 大yaw轴电机
+    Class_Gimbal_Yaw_Motor_LK Motor_Main_Yaw;
+
+    // 小yaw轴电机 2900-4000 俯仰角编码器值
     Class_Gimbal_Yaw_Motor_GM6020 Motor_Yaw;
-
-    // pitch轴电机 2900-4000 俯仰角编码器值
-    Class_Gimbal_Pitch_Motor_GM6020 Motor_Pitch;
-
+    Class_Gimbal_Pitch_Motor_J4310 Motor_Pitch;
     // pithc轴电机
-    Class_Gimbal_Pitch_Motor_LK6010 Motor_Pitch_LK6010;
+    
 
     void Init();
 

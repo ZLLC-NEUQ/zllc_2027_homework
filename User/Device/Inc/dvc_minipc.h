@@ -25,9 +25,9 @@
 #include "drv_can.h"
 /* Exported macros -----------------------------------------------------------*/
 
-class Class_Gimbal_Pitch_Motor_GM6020;
+// class Class_Gimbal_Pitch_Motor_GM6020;
 
-class Class_Gimbal_Yaw_Motor_GM6020;
+// class Class_Gimbal_Yaw_Motor_GM6020;
 
 /* Exported types ------------------------------------------------------------*/
 

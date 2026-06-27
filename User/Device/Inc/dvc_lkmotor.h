@@ -168,6 +168,8 @@ public:
     inline float Get_Target_Radian();
     inline float Get_Target_Omega_Angle();
     inline float Get_Target_Omega_Radian();
+    inline float Get_Transform_Omega();
+    inline float Get_Transform_Angle();
     inline float Get_Target_Torque();
     inline uint16_t Get_Speed_Limit();//获取角度环或者位置环的速度限制
     inline int16_t Get_Iq_Control();//获取扭矩限制
@@ -183,6 +185,8 @@ public:
     inline void Set_Target_Omega_Radian(float __Target_Omega_Radian);
     inline void Set_Target_Current(float __Target_Current);
     inline void Set_Target_Torque(float __Target_Torque);
+    inline void Set_Transform_Omega(float __Transform_Omega);
+    inline void Set_Transform_Angle(float __Transform_Angle);
     inline void Set_Speed_Limit(uint16_t __Speed_Limit);//设置角度环或者位置环的速度限制
     inline void Set_Iq_Control(int16_t __Iq_Control);    
     inline void Set_Out(float __Out);
@@ -247,6 +251,8 @@ protected:
     float Target_Omega_Radian = 0.0f;//目标角速度，弧度制
     float Target_Omega_Angle = 0.0f;//角度制
     
+    float Transform_Omega=0.f;
+    float Transform_Angle=0.f;
     float Target_Current = 0.0f;
     
     float Target_Torque = 0.0f;
@@ -422,7 +428,14 @@ float Class_LK_Motor::Get_Target_Omega_Radian()
 {
     return (Target_Omega_Radian);
 }
-
+float Class_LK_Motor::Get_Transform_Omega()
+{
+    return (Transform_Omega);
+}
+float Class_LK_Motor::Get_Transform_Angle()
+{
+    return (Transform_Angle);
+}
 /**
  * @brief 获取目标扭矩
  *
@@ -564,8 +577,14 @@ void Class_LK_Motor::Set_Target_Torque(float __Target_Torque)
 {
     Target_Torque = __Target_Torque;
 }
-
-
+void Class_LK_Motor::Set_Transform_Omega(float __Transform_Omega)
+{
+    Transform_Omega = __Transform_Omega;
+}
+void Class_LK_Motor::Set_Transform_Angle(float __Transform_Angle)
+{
+    Transform_Angle = __Transform_Angle;
+}
  /**
  * @brief 设置位置或角度模式下的速度限制
  *
