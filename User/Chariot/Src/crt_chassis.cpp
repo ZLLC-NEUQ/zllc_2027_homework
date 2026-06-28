@@ -18,6 +18,9 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "crt_chassis.h"
+#include "buzzer.h"
+#include "drv_math.h"
+#include "config.h"
 
 /* Private macros ------------------------------------------------------------*/
 
@@ -37,6 +40,8 @@
  */
 void Class_Tricycle_Chassis::Init(float __Velocity_X_Max, float __Velocity_Y_Max, float __Omega_Max, float __Steer_Power_Ratio)
 {
+    Supercap.Init(&hfdcan3,100.0f);
+
     Velocity_X_Max = __Velocity_X_Max;
     Velocity_Y_Max = __Velocity_Y_Max;
     Omega_Max = __Omega_Max;
@@ -70,10 +75,29 @@ void Class_Tricycle_Chassis::Init(float __Velocity_X_Max, float __Velocity_Y_Max
     Motor_Wheel[3].PID_Omega.Init(2000.0f, 0.0f, 0.0f, 0.0f, Motor_Wheel[3].Get_Output_Max(), Motor_Wheel[3].Get_Output_Max());
 
     // 轮向电机ID初始化
-    Motor_Wheel[0].Init(&hfdcan1, DJI_Motor_ID_0x201);
-    Motor_Wheel[1].Init(&hfdcan1, DJI_Motor_ID_0x202);
-    Motor_Wheel[2].Init(&hfdcan1, DJI_Motor_ID_0x203);
-    Motor_Wheel[3].Init(&hfdcan1, DJI_Motor_ID_0x204);
+    Motor_Wheel[0].Init(&hfdcan1, DJI_Motor_ID_0x201, DJI_Motor_Control_Method_OPENLOOP, M3508_REDUCTION_RATIO);
+    Motor_Wheel[1].Init(&hfdcan1, DJI_Motor_ID_0x203, DJI_Motor_Control_Method_OPENLOOP, M3508_REDUCTION_RATIO);
+    Motor_Wheel[2].Init(&hfdcan1, DJI_Motor_ID_0x205, DJI_Motor_Control_Method_OPENLOOP, M3508_REDUCTION_RATIO);
+    Motor_Wheel[3].Init(&hfdcan1, DJI_Motor_ID_0x207, DJI_Motor_Control_Method_OPENLOOP, M3508_REDUCTION_RATIO);
+
+    //舵向电机ID初始化
+    Motor_Steer[0].Init(&hfdcan1, DJI_Motor_ID_0x202, DJI_Motor_Control_Method_AGV_MODE, 8.0f);
+    Motor_Steer[1].Init(&hfdcan1, DJI_Motor_ID_0x204, DJI_Motor_Control_Method_AGV_MODE, 8.0f);
+    Motor_Steer[2].Init(&hfdcan1, DJI_Motor_ID_0x206, DJI_Motor_Control_Method_AGV_MODE, 8.0f);
+    Motor_Steer[3].Init(&hfdcan1, DJI_Motor_ID_0x208, DJI_Motor_Control_Method_AGV_MODE, 8.0f);
+
+    //舵向电机ID初始化
+    for(int i=0;i<4,i++)
+    {
+        Motor_Steer[i].PID_Angle.Init(35.0f, 0.0f, 0.0f, 0.0f, 15.0f, 15.0f);
+        Motor_Steer[i].PID_Omega.Init(700.0f,0.0f, 0.0f, 0.0f, 8000, Motor_Steer[0].Get_Output_Max());
+    }
+
+    //舵向电机零点位置初始化
+    Motor_Steer[0].Set_Zero_Position(-1.88f+3.14f);
+    Motor_Steer[1].Set_Zero_Position(-1.65f+3.14f);
+    Motor_Steer[2].Set_Zero_Position(-0.92f+3.14f);
+    Motor_Steer[3].Set_Zero_Position(1.25f+3.14f);
 }
 
 /**

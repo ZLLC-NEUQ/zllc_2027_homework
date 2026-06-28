@@ -26,8 +26,25 @@
 #include "alg_new_power_limit.h"
 #include "dvc_supercap.h"
 #include "config.h"
+#include "dvc_minipc.h"
+#include "drv_math.h"
+#include "kalman_filter.h"
 /* Exported macros -----------------------------------------------------------*/
+#define wheel_diameter 0.118f   // 驱动轮直径，m
+#define half_length 0.178f           // 轮距的一半，m
 
+#define WHEEL_RADIUS (wheel_diameter / 2)   // 驱动轮半径，m
+#define R_DIST (half_length * 1.414f) // 旋转中心与四个舵轮的距离
+
+#define PI 3.141593f
+#define RPM_TO_RAD (2*PI/60)         // 将转速(RPM)转换为角速度(rad/s)
+#define RPM_TO_VEL (PI * wheel_diameter / 60)  // 将转速(RPM)转换为轮子线速度(cm/s)  vel = rpm*pi*D/60  m/s
+#define VEL_TO_RPM (1 / RPM_TO_VEL)            // 将轮子线速度(m/s)转换为转速(RPM)
+#define M2006_REDUCTION_RATIO 36.000000f     // 定义M2006电机的减速比
+#define M3508_REDUCTION_RATIO 15.76f     // 定义M3508电机的减速比
+#define MF7025_ENCODER_ANGLE 4096.0f         // 定义MF7025电机编码器每圈脉冲数
+
+#define RAD_TO_4096 (4096.0f / PI / 2.0f)      // 将弧度值转换为编码器计数值
 /* Exported types ------------------------------------------------------------*/
 
 /**
@@ -82,6 +99,7 @@ public:
 
     // 下方转动电机
     Class_DJI_Motor_C620 Motor_Wheel[4];
+    Class_DJI_Motor_C620_Steer Motor_Steer[4];
 
     void Init(float __Velocity_X_Max = 7.0f, float __Velocity_Y_Max = 7.0f, float __Omega_Max = 24.0f, float __Steer_Power_Ratio = 0.5);
 
@@ -174,44 +192,44 @@ protected:
 
 // 三轮车底盘参数
 
-// 轮组半径
-const float WHEEL_RADIUS = 0.0520f;
+// // 轮组半径
+// const float WHEEL_RADIUS = 0.0520f;
 
-// 轮距中心长度
-const float WHEEL_TO_CORE_DISTANCE[3] = {0.23724f, 0.21224f, 0.21224f};
+// // 轮距中心长度
+// const float WHEEL_TO_CORE_DISTANCE[3] = {0.23724f, 0.21224f, 0.21224f};
 
-// 前心距中心长度
-const float FRONT_CENTER_TO_CORE_DISTANCE = 0.11862f;
+// // 前心距中心长度
+// const float FRONT_CENTER_TO_CORE_DISTANCE = 0.11862f;
 
-// 前后轮距
-const float FRONT_TO_REAR_DISTANCE = WHEEL_TO_CORE_DISTANCE[0] + FRONT_CENTER_TO_CORE_DISTANCE;
+// // 前后轮距
+// const float FRONT_TO_REAR_DISTANCE = WHEEL_TO_CORE_DISTANCE[0] + FRONT_CENTER_TO_CORE_DISTANCE;
 
-// 前轮距前心
-const float FRONT_TO_FRONT_CENTER_DISTANCE = 0.176f;
+// // 前轮距前心
+// const float FRONT_TO_FRONT_CENTER_DISTANCE = 0.176f;
 
-// 轮组方位角
-const float WHEEL_AZIMUTH[3] = {0.0f, atan2f(-FRONT_TO_FRONT_CENTER_DISTANCE, -FRONT_CENTER_TO_CORE_DISTANCE), atan2f(FRONT_TO_FRONT_CENTER_DISTANCE, -FRONT_CENTER_TO_CORE_DISTANCE)};
+// // 轮组方位角
+// const float WHEEL_AZIMUTH[3] = {0.0f, atan2f(-FRONT_TO_FRONT_CENTER_DISTANCE, -FRONT_CENTER_TO_CORE_DISTANCE), atan2f(FRONT_TO_FRONT_CENTER_DISTANCE, -FRONT_CENTER_TO_CORE_DISTANCE)};
 
-// 轮子直径 单位m
-const float WHELL_DIAMETER = 0.154f;
+// // 轮子直径 单位m
+// const float WHELL_DIAMETER = 0.154f;
 
-// 底盘半宽 单位m
-const float HALF_WIDTH = 0.18466f;
+// // 底盘半宽 单位m
+// const float HALF_WIDTH = 0.18466f;
 
-// 底盘半长 单位m
-const float HALF_LENGTH = 0.18466f;
+// // 底盘半长 单位m
+// const float HALF_LENGTH = 0.18466f;
 
-// 转速转角速度	1 rpm = 2pi/60 rad/s
-const float RPM2RAD = 0.104720f;
+// // 转速转角速度	1 rpm = 2pi/60 rad/s
+// const float RPM2RAD = 0.104720f;
 
-// 转速转线速度	vel = rpn*pi*D/60  cm/s
-const float RPM2VEL = 0.806342f;
+// // 转速转线速度	vel = rpn*pi*D/60  cm/s
+// const float RPM2VEL = 0.806342f;
 
-// 线速度转转度  //1.240168
-const float VEL2RPM = 1.240168f;
+// // 线速度转转度  //1.240168
+// const float VEL2RPM = 1.240168f;
 
-// 线速度转角速度 rad/s
-const float VEL2RAD = 1.0f / (WHELL_DIAMETER / 2.0f);
+// // 线速度转角速度 rad/s
+// const float VEL2RAD = 1.0f / (WHELL_DIAMETER / 2.0f);
 
 /* Exported function declarations --------------------------------------------*/
 
