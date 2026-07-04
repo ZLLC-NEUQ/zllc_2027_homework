@@ -339,13 +339,13 @@ void Class_MiniPC::CAN_RxCpltCallback(uint32_t can_id,const uint8_t *rx_data)
       debug_rx1 = rx_data[1];
   uint8_t axis = rx_data[0] & 0x01;//axis=0：yaw , axis=1：pitch
   Struct_MiniPC_Axis_Rx_Cache *cache = NULL;
-    if ((can_id == 0xA2) && (axis == 0)) 
+    if ((can_id == 0xA3) && (axis == 0)) 
   {
-      cache = &Yaw_Rx_Cache;//0xA2 必须对应 axis=0
+      cache = &Yaw_Rx_Cache;//0xA3 必须对应 axis=0
   }
-  else if ((can_id == 0xA3) && (axis == 1))
+  else if ((can_id == 0xA4) && (axis == 1))
   {
-      cache = &Pitch_Rx_Cache;//0xA3 必须对应 axis=1
+      cache = &Pitch_Rx_Cache;//0xA4 必须对应 axis=1
   }
   else
   {

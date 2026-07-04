@@ -213,9 +213,9 @@ void Gimbal_Device_CAN1_Callback(Struct_CAN_Rx_Buffer *CAN_RxMessage)
 		}
 		break;
 
-        case (0xA2): // 算法板yaw包
+        case (0xA3): // 算法板yaw包
         
-        case (0xA3): // 算法板pitch包
+        case (0xA4): // 算法板pitch包
         {
             chariot.MiniPC.CAN_RxCpltCallback(
                 CAN_RxMessage->Header.Identifier,
