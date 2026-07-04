@@ -18,7 +18,8 @@
 //#include "dvc_boardc_ist8310.h"
 #include "alg_MahonyAHRS.h"
 #include "alg_pid.h"
-
+#include "dvc_lkmotor.h"
+//#include "crt_gimbal.h"
 //----------------------------------------------------------------------------------------------------
 
 typedef struct
@@ -89,9 +90,9 @@ class Class_IMU
     float Get_Gyro_Roll(void);
     float Get_Gyro_Pitch(void);
     float Get_Gyro_Yaw(void);
-
+    inline void Set_Motor_Main_Yaw_Now_Omega_Radian(float _Motor_Main_Yaw_Now_Omega_Radian);
     Enum_IMU_Status Get_IMU_Status(void);
-
+    //Class_Gimbal_Yaw_Motor_GM6020 *Motor_Main_Yaw;
     protected:
 
     Class_MahonyAHRS IMU_MahonyAHRS;
@@ -117,7 +118,9 @@ class Class_IMU
     float INS_Quat[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     float INS_Rad[3] = {0.0f, 0.0f, 0.0f};      //euler angle, unit rad.欧拉角 单位 rad
     float INS_Angle[3] = {0.0f, 0.0f, 0.0f};
-
+    float Yaw_rad, Pitch_rad, Roll_rad;
+    float Yaw_test, Pitch_test, Roll_test;
+    float Q[4];         //右手系的四元数
     //重力加速度
 	const float Gravity[3] = {0, 0, 9.81f};
   
@@ -133,7 +136,7 @@ class Class_IMU
     uint8_t accel_temp_update_flag = 0;
     uint8_t mag_update_flag = 0;
     uint8_t imu_start_flag = 0;    
-
+    float Motor_Main_Yaw_Now_Omega_Radian=0.f;
     void BodyFrameToEarthFrame(const float *vecBF, float *vecEF, float *q);
     void EarthFrameToBodyFrame(const float *vecEF, float *vecBF, float *q);
 
@@ -142,7 +145,10 @@ class Class_IMU
 
 //---------------------------------------------------------------------------------------------------
 // Function declarations
-
+inline void Class_IMU:: Set_Motor_Main_Yaw_Now_Omega_Radian(float _Motor_Main_Yaw_Now_Omega_Radian)
+{
+    Motor_Main_Yaw_Now_Omega_Radian=_Motor_Main_Yaw_Now_Omega_Radian;
+}
 
 
 #endif

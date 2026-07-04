@@ -59,7 +59,7 @@ typedef struct
 typedef struct
 {
     uint16_t Max_Power;            // 最大功率限制
-    float Min_Buffer = 40.f;       // 最小预留缓冲能量
+    float Min_Buffer = 60.f;       // 最小预留缓冲能量
     float Buffer_K = 8.0f;         // 缓冲环Kp
     float Buffer_Power;            // 缓冲环可用能量
     float Scale_Conffient;         // 功率收缩系数
@@ -70,17 +70,16 @@ typedef struct
     float Total_error;              
 
     #ifdef AGV
-    Struct_Power_Motor_Data Motor_Data[8]; // 舵轮底盘八个电机，分为四组，默认偶数索引值的电机为转向电机，奇数索引值的电机为动力电机
+    Struct_Power_Motor_Data Motor_Data[8]; //前四个是动力电机，后四个是转向电机
     #else
-    Struct_Power_Motor_Data Motor_Data[4]; // 舵轮底盘八个电机，分为四组，默认偶数索引值的电机为转向电机，奇数索引值的电机为动力电机
+    Struct_Power_Motor_Data Motor_Data[4];
     #endif
 
 } Struct_Power_Management;
 
-class Class_Power_Limit
+class Class_New_Power_Limit
 {
 public:
-
     float Calculate_Theoretical_Power(float omega, float torque, uint8_t motor_index);
     float Calculate_Toque(float omega, float power, float torque, uint8_t motor_index);
     void Calculate_Power_Coefficient(float actual_power, const Struct_Power_Motor_Data *motor_data);
@@ -96,6 +95,7 @@ public:
     inline void Set_K2(float _k2) { k2 = _k2; }
     inline void Set_K3(float _k3) { k3 = _k3; }
 
+
 protected:
 
     // 普通四电机底盘参数
@@ -103,10 +103,9 @@ protected:
     float ErrorLow;               //低于Error会进行等比分配
     float ErrorUp;                //高于error，直接按error分配功率，防止功率乱吃，分配错误
 
-    float k1 = 0.0150000001f;
-    float k2 = 535.00f;
-    float k3 = 6.50f / 8.00f;
-    float k4 = 1.0f;
+    float k1 = 0.0200000001f;
+    float k2 = 530.00f;
+    float k3 = 7.2 / 8.00f;
     RLS<2> rls{1e-5f, 0.9999f};
 
 };

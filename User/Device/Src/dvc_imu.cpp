@@ -26,7 +26,7 @@ void Class_IMU::Init()
     IMU_MahonyAHRS.init(INS_Quat);
  
     //EKF初始化                         第三个加速度参数加大，减小运动过程中的影响    过于不相信加速度导致静止到目标收敛慢，看起来在飘
-    IMU_QuaternionEKF_Init(10, 0.001, 10000000, 0.9996, 0.05, offsety, &QEKF_INS);
+    IMU_QuaternionEKF_Init(10, 0.001, 10000000, 0.9996, 0.05, 0.0f, &QEKF_INS);
 
     INS.AccelLPF = 0.05f;
 
@@ -54,8 +54,10 @@ void Class_IMU::TIM_Calculate_PeriodElapsedCallback(void)
     INS.Gyro[0] = BMI088_Raw_Data.Gyro[0];
     INS.Gyro[1] = BMI088_Raw_Data.Gyro[1];
     INS.Gyro[2] = BMI088_Raw_Data.Gyro[2];
-
-    // 核心函数,EKF更新四元数
+    if(fabs(INS.Gyro[2]) < 0.03f && fabs(Motor_Main_Yaw_Now_Omega_Radian) < 0.03f){      //防止静止状态下的零飘
+        INS.Gyro[2] = 0.0f;
+    }
+   // 核心函数,EKF更新四元数
     IMU_QuaternionEKF_Update(INS.Gyro[0], INS.Gyro[1], INS.Gyro[2], INS.Accel[0], INS.Accel[1], INS.Accel[2], INS_DWT_Dt, &QEKF_INS);
 
     memcpy(INS.q, QEKF_INS.q, sizeof(QEKF_INS.q));
@@ -80,7 +82,7 @@ void Class_IMU::TIM_Calculate_PeriodElapsedCallback(void)
     if(Tempture_Cnt_mod50 % 50 == 0)
     {
         PID_IMU_Tempture.Set_Now(BMI088_Raw_Data.Temperature);
-        PID_IMU_Tempture.Set_Target(40.);
+        PID_IMU_Tempture.Set_Target(50.);
         PID_IMU_Tempture.TIM_Adjust_PeriodElapsedCallback();
         if(PID_IMU_Tempture.Get_Out() <= 0)TIM_Set_PWM(&htim3, TIM_CHANNEL_4, 0);
         else
@@ -211,7 +213,7 @@ float Class_IMU::Get_Accel_Z_b()
 
 float* Class_IMU::Get_Quaternion(void)
 {
-  return INS.q;
+  return Q;
 }
 
 float Class_IMU::Get_Gyro_Roll(void)

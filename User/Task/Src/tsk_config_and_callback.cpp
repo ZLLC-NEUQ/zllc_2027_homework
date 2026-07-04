@@ -332,9 +332,9 @@ void Device_SPI2_Callback(uint8_t *Tx_Buffer, uint8_t *Rx_Buffer, uint16_t Lengt
  */
 void DR16_UART5_Callback(uint8_t *Buffer, uint16_t Length)
 {
-    chariot.DR16.DR16_UART_RxCpltCallback(Buffer);
-    //底盘 云台 发射机构 的控制策略
-    chariot.TIM_Control_Callback();
+    if(Length == 18){               //长度小于18的应该是错误的数据
+        chariot.DR16.DR16_UART_RxCpltCallback(Buffer);
+    }
 }
 
 /**
@@ -390,7 +390,7 @@ void Ist8310_IIC3_Callback(uint8_t* Tx_Buffer, uint8_t* Rx_Buffer, uint16_t Tx_L
  * @param Buffer UART收到的消息
  * @param Length 长度
  */
-#ifdef CHASSIS
+
 float Dts ;
 uint32_t last_cnts = 0;
 void Referee_UART10_Callback(uint8_t *Buffer, uint16_t Length)
@@ -398,7 +398,7 @@ void Referee_UART10_Callback(uint8_t *Buffer, uint16_t Length)
     Dts = 1.0f/DWT_GetDeltaT(&last_cnts);
     chariot.Referee.UART_RxCpltCallback(Buffer,Length);
 }
-#endif
+
 /**
  * @brief UART1超电回调函数
  *
@@ -650,6 +650,8 @@ extern "C" void Task_Init()
         CAN_Init(&hfdcan3, Chassis_Device_CAN3_Callback);
 
         //裁判系统
+        huart10.Init.BaudRate = 115200;
+        HAL_UART_Init(&huart10);
         UART_Init(&huart10, Referee_UART10_Callback, 128);//并未使用环形队列 尽量给长范围增加检索时间 减少丢包
 
         //c板陀螺仪spi外设
@@ -671,11 +673,23 @@ extern "C" void Task_Init()
 
         //c板陀螺仪spi外设
         SPI_Init(&hspi2,Device_SPI2_Callback);
-        //磁力计iic外设
-        //IIC_Init(&hi2c3, Ist8310_IIC3_Callback);    //达妙无磁力计
-        //遥控器接收
+  //遥控器接收
+        #ifdef USE_DR16
         UART_Init(&huart5, DR16_UART5_Callback, 18);
-        UART_Init(&huart1, VT13_UART_Callback, 60);
+        #elif defined(USE_VT13)
+        UART_Init(&huart9, VT13_UART_Callback, 30);
+        #elif defined(USE_FS_i6X)
+        UART_Init(&huart5, FS_i6X_UART5_Callback, 25);      
+        #endif
+        //上位机USB
+        USB_Init(&MiniPC_USB_Manage_Object,MiniPC_USB_Callback);
+        //上位机串口
+        UART_Init(&huart8, MiniPC_UART_Callback, 56);
+
+        UART_Init(&huart7, Referee_UART10_Callback, 128);
+
+        //外置IMU串口   接收长度14，但是串口空闲中断刚好接满14的时候不会进入空闲事件中断，只进入接收满中断
+        UART_Init(&huart10, IMUB_USART7_Callback, 14 * 2);     
 
     #endif
 
@@ -721,24 +735,6 @@ extern "C" void Task_Init()
 	//  }//不同车的逻辑
 #endif
 #ifdef CHASSIS
-    if (start_flag == 1)
-    {
-        GraphicSendtask();
-
-        static float freq;
-        static uint32_t time_s;
-        freq = 1 / DWT_GetDeltaT(&time_s);
-
-        JudgeReceiveData.robot_id = chariot.Referee.Get_ID();
-        JudgeReceiveData.Chassis_Control_Type = chariot.Chassis.Get_Chassis_Control_Type();
-        JudgeReceiveData.Pitch_Angle = chariot.Gimbal_Tx_Pitch_Angle; // pitch角度
-        JudgeReceiveData.Supercap_Voltage = chariot.Chassis.Supercap.Get_Supercap_Charge_Percentage(); // 超电电压百分比
-        JudgeReceiveData.Chassis_Gimbal_Diff = chariot.Motor_Yaw.Get_Now_Angle(); // 底盘角度    
-
-        if (chariot.Referee_UI_Refresh_Status == Referee_UI_Refresh_Status_ENABLE)
-            Init_Cnt = 255;
-
-    }
 
 #endif
 }

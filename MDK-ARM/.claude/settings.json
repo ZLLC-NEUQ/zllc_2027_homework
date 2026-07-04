@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/Lenovo/Desktop/zllc_2027_homework/User/Interaction/Src/**)",
+      "Read(//c/Users/Lenovo/Desktop/zllc_2027_homework/User/Device/Inc/**)",
+      "Read(//c/Users/Lenovo/Desktop/zllc_2027_homework/User/Device/Src/**)",
+      "Read(//c/Users/Lenovo/Desktop/zllc_2027_homework/User/Driver/Inc/**)",
+      "Read(//c/Users/Lenovo/Desktop/zllc_2027_homework/User/Driver/Src/**)",
+      "Read(//c/Users/Lenovo/Desktop/zllc_2027_homework/User/Task/Src/**)",
+      "Read(//c/Users/Lenovo/Desktop/zllc_2027_homework/**)",
+      "Read(//c/Users/Lenovo/Desktop/zllc_2027_homework/User/Algorithm/Inc/**)",
+      "Read(//c/Users/Lenovo/Desktop/zllc_2027_homework/User/Algorithm/Src/**)",
+      "Read(//c/Users/Lenovo/Desktop/zllc_2027_homework/User/Chariot/Src/**)",
+      "Read(//c/Users/Lenovo/Desktop/zllc_2027_homework/User/**)"
+    ]
+  }
+}

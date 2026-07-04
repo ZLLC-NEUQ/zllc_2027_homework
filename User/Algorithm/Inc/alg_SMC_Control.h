@@ -4,7 +4,7 @@
 #include "arm_math.h"
 
 #define GM6020_TORQUE_CONST 0.741f
-#define GM6020_I_TO_OUT 16384.0f / 3.0f
+#define GM6020_I_TO_OUT (16384.0f / 3.0f)
 
 class Class_SMC{
   public:
@@ -47,9 +47,10 @@ class Class_SMC{
 
   float Out = 0.0f;
 
-  const float s_Delta = 3.0f;
+  const float s_Delta = 5.0f;
 
   void TIM_Data_Updata();
+  float Signal(float s);
   float Sat_Function(float s);    //饱和函数
 };
 

@@ -30,6 +30,11 @@ enum Enum_PID_D_First
     PID_D_First_ENABLE,
 };
 
+enum Enum_PID_D_Extern{                 //是否从外部给予d项，缺点是目标值变化时性能下降，优点是通过直接获得的测量值传入极大的减少噪声，减少对结构的冲击
+    PID_D_Extern_DISABLE = 0,
+    PID_D_Extern_ENABLE,
+};
+
 /**
  * @brief Reusable, PID算法
  *
@@ -53,8 +58,12 @@ public:
     inline void Set_I_Variable_Speed_B(float __Variable_Speed_I_B);
     inline void Set_I_Separate_Threshold(float __I_Separate_Threshold);
     inline void Set_Target(float __Target);
+    inline void Set_D_Target(float __D_Target);
     inline void Set_Now(float __Now);
     inline void Set_Integral_Error(float __Integral_Error);
+    inline void Set_D_Extern_Value(float __D_Extern_Value);
+    inline void Set_PID_D_Filter(float __alpha);
+    inline void Set_D_Extern_Status(Enum_PID_D_Extern __D_EXtern_Status);
 
     void TIM_Adjust_PeriodElapsedCallback();
 
@@ -67,6 +76,9 @@ protected:
     float Dead_Zone;
     //微分先行
     Enum_PID_D_First D_First;
+    Enum_PID_D_Extern D_Extern = PID_D_Extern_DISABLE;
+
+    float d_alpha = 0.0f;             //一阶滤波系数
 
     //常量
 
@@ -114,10 +126,15 @@ protected:
     //当前值
     float Now = 0.0f;
 
+    float d_Target = 0.0f;        //目标值的微分
+
     //读写变量
 
     //积分值
     float Integral_Error = 0.0f;
+
+    float last_d_out = 0.0f;
+    float D_Extern_Value = 0.0f;
 
     //内部函数
 };
@@ -247,6 +264,15 @@ void Class_PID::Set_Target(float __Target)
 }
 
 /**
+ * @brief 设定目标值的微分
+ *
+ * @param __D_Target 目标值的微分
+ */
+void Class_PID::Set_D_Target(float __D_Target){
+    d_Target = __D_Target;
+}
+
+/**
  * @brief 设定当前值
  *
  * @param __Now 当前值
@@ -264,6 +290,34 @@ void Class_PID::Set_Now(float __Now)
 void Class_PID::Set_Integral_Error(float __Integral_Error)
 {
     Integral_Error = __Integral_Error;
+}
+
+/**
+ * @brief 设定外部Kd传入的计算值
+ *
+ * @param
+ */
+inline void Class_PID::Set_D_Extern_Value(float __D_Extern_Value)
+{
+    D_Extern_Value = __D_Extern_Value;
+}
+
+
+void Class_PID::Set_PID_D_Filter(float __alpha)
+{
+    d_alpha = __alpha;
+
+    Math_Constrain(&d_alpha, 0.0f, 1.0f);
+}
+
+/**
+ * @brief 设定是否启用外置kd计算
+ *
+ * @param
+ */
+inline void Class_PID::Set_D_Extern_Status(Enum_PID_D_Extern __D_EXtern_Status)
+{
+    D_Extern = __D_EXtern_Status;
 }
 
 #endif

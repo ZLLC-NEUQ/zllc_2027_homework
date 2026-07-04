@@ -196,7 +196,8 @@ public:
 
     // 裁判系统
     Class_Referee *Referee;
-
+    // 上位机
+    Class_MiniPC *MiniPC;
     // 拨弹盘电机
     Class_DJI_Motor_C610 Motor_Driver;
 
@@ -213,7 +214,7 @@ public:
     float Heat_Local = 0.0f; // 本地累加热量
     float Heat_Max = 400.0f;
     float Cooling_Value = 10.0f; // 裁判冷却值
-
+    float Heat_Consumption = 10.f;
     // 收缩参数（可调）
     float Tau0 = 0.45f;         // 提前收缩时间
     float Tau1 = 0.0965f;          // 收缩陡度
@@ -233,6 +234,11 @@ public:
     inline float Get_Default_Driver_Omega();
     inline float Get_Friction_Omega();
     inline float Get_Friction_Omega_Threshold();
+    inline float Get_Flag();
+    inline uint16_t Get_Heat();
+    inline uint16_t Get_Heat_Max();
+    inline float Get_Cooling_Value();
+    inline float Get_Heat_Consumption();
 
     inline Enum_Booster_Control_Type Get_Booster_Control_Type();
     inline Enum_Friction_Control_Type Get_Friction_Control_Type();
@@ -258,16 +264,19 @@ protected:
     // 拨弹盘堵转扭矩阈值, 超出被认为卡弹
     uint16_t Driver_Torque_Threshold = 6000;
     // 摩擦轮单次判定发弹阈值, 超出被认为发射子弹
-    uint16_t Friction_Torque_Threshold = 1900;
+    uint16_t Friction_Torque_Threshold = 2000;
     // 摩擦轮速度判定发弹阈值, 超出则说明已经开机
     float Friction_Omega_Threshold = 600;
 
-    // 内部变量
-    uint8_t shoot_time = 0;
-    float ShootTime = 0;
-    float shoot_speed;
-    float Heat_Consumption = 10.0f;
-
+    uint16_t Heat;
+    float shoot_time = 0.f;
+    float ShootTime = 0.f;
+    float shoot_speed = 0.f;
+    float Now_Angle = 0.f;
+    float shoot_number = 0.f;
+    float ShootNumber = 0.f;
+    float flag = 0.f;
+    //读变量
     // 读变量
 
     // 拨弹盘默认速度
@@ -279,10 +288,10 @@ protected:
     Enum_Booster_Control_Type Booster_Control_Type = Booster_Control_Type_DISABLE;
     Enum_Friction_Control_Type Friction_Control_Type = Friction_Control_Type_DISABLE;
     // 摩擦轮角速度
-    float Friction_Omega = 1000.0f;
+    float Friction_Omega = 1010.0f;
     float Target_Bullet_Speed = 23.5f;
     // 拨弹盘实际的目标速度
-    float Driver_Omega = 2.0f * PI * 2.5f ;
+    float Driver_Omega = 2.0f * PI * 2.f ;
     // 拨弹轮目标绝对角度 加圈数
     float Driver_Angle = 0.0f;
     // 读写变量
@@ -307,6 +316,33 @@ void Class_Booster::Set_Target_Drvier_Angle(float __Driver_Angle)
 float Class_Booster::Get_Default_Driver_Omega()
 {
     return (Default_Driver_Omega);
+}
+/**
+ * @brief 获取flag值
+ *
+ * @return float flag值
+ */
+float Class_Booster::Get_Flag()
+{
+    return (flag);
+}
+uint16_t Class_Booster::Get_Heat()
+{
+    return (Heat);
+}
+
+uint16_t Class_Booster::Get_Heat_Max()
+{
+    return (Heat_Max);
+}
+
+float Class_Booster::Get_Cooling_Value()
+{
+    return (Cooling_Value);
+}
+float Class_Booster::Get_Heat_Consumption()
+{
+    return (Heat_Consumption);
 }
 
 /**

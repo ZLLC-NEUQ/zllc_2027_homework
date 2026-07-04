@@ -69,6 +69,7 @@ uint8_t CAN3_0xxf7_Tx_Data[8];
 uint8_t CAN3_0xxf8_Tx_Data[8];
 
 uint8_t CAN_Supercap_Tx_Data[8];
+uint8_t CAN_Chassis_Tx_Data[8];   //底盘给云台发送缓冲区
 uint8_t CAN3_Chassis_Tx_Data_A[8];   //底盘给云台发送缓冲区
 uint8_t CAN3_Chassis_Tx_Data_B[8];   //底盘给云台发送缓冲区
 uint8_t CAN3_Chassis_Tx_Data_C[8];   //底盘给云台发送缓冲区
@@ -80,6 +81,9 @@ uint8_t CAN3_MiniPC_Tx_Data_A[8];   //下位机发送缓冲区
 uint8_t CAN3_MiniPC_Tx_Data_B[8];   //下位机发送缓冲区
 uint8_t CAN3_MiniPC_Tx_Data_C[8];   //下位机发送缓冲区
 uint8_t CAN3_MiniPC_Tx_Data_D[8];   //下位机发送缓冲区
+uint8_t CAN3_Gimbal_Tx_Chassis_Data[8];  //云台给底盘发送缓冲区
+uint8_t CAN3_Sentry_CMD_Data[8];   //云台给底盘发送缓冲区
+
 
 uint8_t CAN1_MiniPc_Tx_Data[8];
 uint8_t CAN2_MiniPc_Tx_Data[8];
@@ -360,45 +364,45 @@ void TIM_CAN_PeriodElapsedCallback()
 
     if (mod100 == 10) //100Hz
     {
-        CAN_Send_Data(&hfdcan2, 0x68, CAN2_Chassis_Tx_Gimbal_Data, 8);
-        CAN_Send_Data(&hfdcan2, 0x89, CAN2_Chassis_Tx_Gimbal_Data_1, 8);		
-//        CAN_Send_Data(&hfdcan3, 0x191, CAN3_Chassis_Tx_Data_G, 8);
+        //        CAN_Send_Data(&hfdcan3, 0x191, CAN3_Chassis_Tx_Data_G, 8);
         mod100 = 0;
     }
-    if (mod20 == 20) //50Hz
+    if (mod20 == 20) // 50Hz
     {
-        //上板
-        //CAN_Send_Data(&hfdcan2, 0x188, CAN3_Chassis_Tx_Data_A, 8);
-//        CAN_Send_Data(&hfdcan3, 0x199, CAN3_Chassis_Tx_Data_B, 8);
-//        CAN_Send_Data(&hfdcan3, 0x178, CAN3_Chassis_Tx_Data_C, 8);      
-//        CAN_Send_Data(&hfdcan3, 0x197, CAN3_Chassis_Tx_Data_E, 8);
-//        CAN_Send_Data(&hfdcan3, 0x198, CAN3_Chassis_Tx_Data_D, 8);
-//        CAN_Send_Data(&hfdcan3, 0x196, CAN3_Chassis_Tx_Data_F, 8);
-        //超电
-        CAN_Send_Data(&hfdcan3, 0x66, CAN_Supercap_Tx_Data, 8);
+        // 上板
+        // CAN_Send_Data(&hfdcan2, 0x188, CAN3_Chassis_Tx_Data_A, 8);
+        //        CAN_Send_Data(&hfdcan3, 0x199, CAN3_Chassis_Tx_Data_B, 8);
+        //        CAN_Send_Data(&hfdcan3, 0x178, CAN3_Chassis_Tx_Data_C, 8);
+        //        CAN_Send_Data(&hfdcan3, 0x197, CAN3_Chassis_Tx_Data_E, 8);
+        //        CAN_Send_Data(&hfdcan3, 0x198, CAN3_Chassis_Tx_Data_D, 8);
+        //        CAN_Send_Data(&hfdcan3, 0x196, CAN3_Chassis_Tx_Data_F, 8);
+        CAN_Send_Data(&hfdcan2, 0x78, CAN_Chassis_Tx_Data, 8);
+        // 超电
+        CAN_Send_Data(&hfdcan2, 0x66, CAN_Supercap_Tx_Data, 8);
         mod20 = 0;
     }
-    #elif defined (GIMBAL)
+#elif defined (GIMBAL)
         // CAN_Send_Data(&hfdcan2, 0x141, CAN2_0x141_Tx_Data, 8);
         //CAN_Send_Data(&hfdcan2, 0xf1, CAN2_0xxf1_Tx_Data, 8);
-
+  CAN_Send_Data(&hfdcan1, 0x1fe, CAN1_0x1fe_Tx_Data, 8);          // Yaw Pitch 6020
     static uint8_t mod5 = 0,mod2 = 0,mod10 = 0;
     mod5++;
     mod2++;
     mod10++;
     
-    if(mod5 == 5)
+    if(mod5 == 3)
     {
         mod5 = 0;
-        CAN_Send_Data(&hfdcan2, 0x77, CAN2_Gimbal_Tx_Chassis_Data, 8); //给底盘发送控制命令 按照0x77 ID 发送
-        CAN_Send_Data(&hfdcan2, 0x78, CAN2_Gimbal_Tx_Chassis_Data_1, 8);
+          CAN_Send_Data(&hfdcan1, 0x200, CAN1_0x200_Tx_Data, 8);          // 摩擦轮电机
         
     }
+    //  CAN3  下板
+    CAN_Send_Data(&hfdcan2, 0x200, CAN2_0x200_Tx_Data, 8);         // 拨弹盘电机
+    CAN_Send_Data(&hfdcan2, 0x141, CAN2_0x141_Tx_Data, 8);         // 大yaw-MF9025  按照0x141 ID 发送 一次只能控制一个电机
 
-    if(mod2 == 2)
+    if(mod2 == 5)
     {
-        CAN_Send_Data(&hfdcan2, 0xf1, CAN2_0xxf1_Tx_Data, 8);
-        CAN_Send_Data(&hfdcan1, 0xa0, CAN1_MiniPc_Tx_Data, 8);
+     CAN_Send_Data(&hfdcan2, 0x77, CAN3_Gimbal_Tx_Chassis_Data, 8); // 给底盘发送控制命令 按照0x77 ID 发送
 			  //CAN_Send_Data(&hfdcan2, 0xf1, CAN2_0xxf1_Tx_Data, 8);
         mod2 = 0;
     } 

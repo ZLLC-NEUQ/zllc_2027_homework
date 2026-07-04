@@ -23,7 +23,7 @@
 #include "dvc_supercap.h"
 #include "crt_chassis.h"
 #include "config.h"
-
+#include "dvc_Fs_i6x.h"
 #include "buzzer.h"
 /* Exported macros -----------------------------------------------------------*/
 class Class_Chariot;
@@ -45,8 +45,6 @@ enum Enum_MinPC_Aim_Status
     MinPC_Aim_Status_ENABLE,
 };
 
-
-
 /**
  * @brief 摩擦轮状态
  *
@@ -59,7 +57,7 @@ enum Enum_Fric_Status : uint8_t
 
 /**
  * @brief 自瞄模式下是否手控打弹
- * 
+ *
  */
 enum Enum_MiniPC_User_Status : uint8_t
 {
@@ -140,6 +138,12 @@ public:
 
     void Reload_TIM_Status_PeriodElapsedCallback();
 };
+class Class_FSM_Alive_Control_Fs_i6x : public Class_FSM
+{
+    public:
+    Class_Chariot *Chariot;
+    void Reload_TIM_Status_PeriodElapsedCallback();
+};
 // 添加活动控制器枚举类型
 enum Enum_Active_Controller
 {
@@ -159,9 +163,10 @@ public:
 
     // 获取yaw电机编码器值 用于底盘和云台坐标系的转换
     // 底盘随动PID环
-    Class_DJI_Motor_GM6020 Motor_Yaw;
+    Class_Gimbal_Yaw_Motor_LK Motor_Main_Yaw;
     Class_PID PID_Chassis_Fllow;
 
+    Class_IMU Boardc_BMI;
 #endif
 
     // 裁判系统
@@ -171,9 +176,9 @@ public:
 
     // 遥控器
     Class_DR16 DR16;
-
+    Class_Fs_i6x FS_i6X;
     Class_VT13 VT13;
-       // 上位机
+    // 上位机
     Class_MiniPC MiniPC;
     // 云台
     Class_Gimbal Gimbal;
@@ -183,7 +188,8 @@ public:
     // 遥控器离线保护控制状态机
     Class_FSM_Alive_Control FSM_Alive_Control;
     Class_FSM_Alive_Control_VT13 FSM_Alive_Control_VT13;
-   
+Class_FSM_Alive_Control_Fs_i6x FSM_Alive_Control_Fs_i6x;
+        friend class Class_FSM_Alive_Control_Fs_i6x;
     friend class Class_FSM_Alive_Control;
     friend class Class_FSM_Alive_Control_VT13;
 #endif
@@ -192,41 +198,37 @@ public:
 
 #ifdef CHASSIS
 
-    void CAN_Chassis_Rx_Gimbal_Callback();
-    void CAN_Chassis_Tx_Gimbal_Callback();
-    void CAN_Chassis_Rx_Gimbal_Callback_1();
-    void CAN_Chassis_Tx_Gimbal_Callback_1();
-    void TIM1msMod50_Gimbal_Communicate_Alive_PeriodElapsedCallback();
-    uint16_t Booster_fric_omega_left = 0;
-    uint16_t Booster_fric_omega_right = 0;
-		uint16_t Booster_bullet_num_before=0;
-		uint16_t Booster_bullet_num=0;
+ 
+        void CAN_Chassis_Rx_Gimbal_Callback(uint8_t *Rx_Data);
+        void CAN_Chassis_Tx_Gimbal_Callback();
+        void TIM1msMod50_Gimbal_Communicate_Alive_PeriodElapsedCallback();
+        inline void Set_Gimbal_Status(Enum_Gimbal_Status __Gimbal_Status);
+        inline Enum_Gimbal_Status Get_Gimbal_Status();
 #elif defined(GIMBAL)
 
-    inline void DR16_Offline_Cnt_Plus();
+inline void DR16_Offline_Cnt_Plus();
 
-    inline uint16_t Get_DR16_Offline_Cnt();
-    inline void Clear_DR16_Offline_Cnt();
+inline uint16_t Get_DR16_Offline_Cnt();
+inline void Clear_DR16_Offline_Cnt();
 
-    inline Enum_Chassis_Control_Type Get_Pre_Chassis_Control_Type();
-    inline Enum_Gimbal_Control_Type Get_Pre_Gimbal_Control_Type();
-    inline Enum_Booster_Control_Type Get_Pre_Booster_Control_Type();
+inline Enum_Chassis_Control_Type Get_Pre_Chassis_Control_Type();
+inline Enum_Gimbal_Control_Type Get_Pre_Gimbal_Control_Type();
+inline Enum_Booster_Control_Type Get_Pre_Booster_Control_Type();
 
-    inline void Set_Pre_Chassis_Control_Type(Enum_Chassis_Control_Type __Chassis_Control_Type);
-    inline void Set_Pre_Gimbal_Control_Type(Enum_Gimbal_Control_Type __Gimbal_Control_Type);
-    inline void Set_Pre_Booster_Control_Type(Enum_Booster_Control_Type __Booster_Control_Type);
+inline void Set_Pre_Chassis_Control_Type(Enum_Chassis_Control_Type __Chassis_Control_Type);
+inline void Set_Pre_Gimbal_Control_Type(Enum_Gimbal_Control_Type __Gimbal_Control_Type);
+inline void Set_Pre_Booster_Control_Type(Enum_Booster_Control_Type __Booster_Control_Type);
 
-    inline Enum_Chassis_Status Get_Chassis_Status();
-    // inline Enum_DR16_Control_Type Get_DR16_Control_Type();
+inline Enum_Chassis_Status Get_Chassis_Status();
+// inline Enum_DR16_Control_Type Get_DR16_Control_Type();
 
-    void CAN_Gimbal_Rx_Chassis_Callback();
-    void CAN_Gimbal_Tx_Chassis_Callback();
-    void CAN_Gimbal_Rx_Chassis_Callback_1();
-    void CAN_Gimbal_Tx_Chassis_Callback_1();
+void CAN_Gimbal_Rx_Chassis_Callback();
+void CAN_Gimbal_Tx_Chassis_Callback();
 
-    void TIM_Control_Callback();
+void MiniPC_Data_Updata();
+void TIM_Control_Callback();
 
-    void TIM1msMod50_Chassis_Communicate_Alive_PeriodElapsedCallback();
+void TIM1msMod50_Chassis_Communicate_Alive_PeriodElapsedCallback();
 #endif
 
     void TIM_Calculate_PeriodElapsedCallback();
@@ -250,8 +252,8 @@ public:
     Enum_Referee_UI_Refresh_Status Referee_UI_Refresh_Status = Referee_UI_Refresh_Status_DISABLE;
     Enum_Booster_User_Control_Type Booster_User_Control_Type = Booster_User_Control_Type_SINGLE;
     Enum_MiniPC_Type MiniPC_Type = MiniPC_Type_Nomal;
-	//Enum_Antispin_Type Antispin_Type=Antispin_On;
-		
+    // Enum_Antispin_Type Antispin_Type=Antispin_On;
+
     // 底盘云台通讯数据
     float Gimbal_Tx_Pitch_Angle = 0;
 
@@ -266,7 +268,7 @@ protected:
 
 #ifdef CHASSIS
     // 底盘标定参考正方向角度(数据来源yaw电机)
-    float Reference_Angle =2.34929156;
+    //float Reference_Angle = -1.4265281;
     // float Reference_Angle =2.34929156 -0.52f;
     // 小陀螺云台坐标系稳定偏转角度 用于矫正
     float Offset_Angle = 0.0f; // 7.5°
@@ -275,10 +277,10 @@ protected:
     // 写变量
     uint32_t Gimbal_Alive_Flag = 0;
     uint32_t Pre_Gimbal_Alive_Flag = 0;
-
+    float Spin_Omega = 0.0f;
     Enum_Gimbal_Status Gimbal_Status = Gimbal_Status_DISABLE;
 #endif
- 
+
 #ifdef GIMBAL
     // 遥控器拨动的死区, 0~1
     float DR16_Dead_Zone;
@@ -296,7 +298,11 @@ protected:
     float DR16_Yaw_Angle_Resolution = 0.01f * PI * 57.29577951308232;
     // DR16云台pitch灵敏度系数(0.001PI表示pitch速度最大时为1rad/s)
     float DR16_Pitch_Angle_Resolution = 0.01f * PI * 57.29577951308232;
+    // 富斯遥控器死区
+    float FS_i6X_Dead_Zone = 0.03f;
 
+    float FS_i6X_Yaw_Angle_Resolution = 0.0023f * PI * 57.29577951308232;
+    float FS_i6X_Pitch_Angle_Resolution = 0.010f * PI * 57.29577951308232;
     // DR16云台yaw灵敏度系数(0.001PI表示yaw速度最大时为1rad/s)
     float DR16_Yaw_Resolution = 0.003f * PI;
     // DR16云台pitch灵敏度系数(0.001PI表示pitch速度最大时为1rad/s)
@@ -477,6 +483,15 @@ void Class_Chariot::Clear_DR16_Offline_Cnt()
 }
 
 #endif
+#ifdef CHASSIS
+    void Class_Chariot::Set_Gimbal_Status(Enum_Gimbal_Status __Gimbal_Status){
+        Gimbal_Status = __Gimbal_Status;
+    }
 
+    Enum_Gimbal_Status Class_Chariot::Get_Gimbal_Status(){
+        return Gimbal_Status;
+    }   
+
+#endif
 
 /************************ COPYRIGHT(C) USTC-ROBOWALKER **************************/

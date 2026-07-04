@@ -35,6 +35,9 @@ extern "C" {
 
 #include "arm_math.h"
 
+#ifdef __cplusplus
+}
+#endif
 //#include "dsp/matrix_functions.h"
 #include "math.h"
 #include "stdint.h"
@@ -128,25 +131,5 @@ void Kalman_Filter_SetK(KalmanFilter_t *kf);
 void Kalman_Filter_xhatUpdate(KalmanFilter_t *kf);
 void Kalman_Filter_P_Update(KalmanFilter_t *kf);
 float *Kalman_Filter_Update(KalmanFilter_t *kf, void* Para1);
-
-// 卡尔曼滤波器结构体
-typedef struct {
-    float x;  // 当前估计值
-    float P;  // 误差协方差
-    float K;  // 卡尔曼增益
-
-    //卡尔曼滤波器参数
-    float Q;  // 过程噪声协方差
-    float R;  // 观测噪声协方差
-    float A;  // 状态转移矩阵
-    float H;  // 观测矩阵
-} KalmanFilter;
-void kalman_init(KalmanFilter *kf, float initial_value);
-void kalman_update(KalmanFilter *kf, float measurement);
-
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif //__KALMAN_FILTER_H

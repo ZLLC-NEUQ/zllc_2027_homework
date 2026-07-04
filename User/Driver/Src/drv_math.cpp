@@ -212,5 +212,18 @@ float Normalize_Angle_Radian_0_to_2PI(float Angle_Radian){
 }
 
 
+/**
+ * @brief 将任意角度归一化到 -PI 到 PI  可用于处理-180于180的突变 度
+ * @param Angle_Radian 
+ * @return 
+ */
+float Normalize_Angle_Angle_PI_to_PI(float Angle_Radian){
+    while (Angle_Radian > 180.0f)
+        Angle_Radian -= 2.0f * 180.0f;
+    while (Angle_Radian < -180.0f)
+        Angle_Radian += 2.0f * 180.0f;
+    return Angle_Radian;
+}
+
 
 /************************ COPYRIGHT(C) USTC-ROBOWALKER **************************/

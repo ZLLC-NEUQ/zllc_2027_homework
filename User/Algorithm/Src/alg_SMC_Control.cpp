@@ -15,12 +15,16 @@ void Class_SMC::Init(float __J, float __K, float __c, float __epsilon, float __T
 
 void Class_SMC::TIM_Data_Updata()
 {
-  d_Target  = (Target - Last_Target) * 500.0f;
-  dd_Target = (Target - 2 * Last_Target + LLast_Target) * 10.0f;
+  d_Target  = (Target - Last_Target) * 100.0f * PI / 180.0f;
+  dd_Target = (Target - 2 * Last_Target + LLast_Target) * 10.0f * PI / 180.0f;
   //dd_Target = 0.0f;
 
-  error   = Target - Now_x1;
-  d_error = d_Target - Now_x2;
+  error   = (Target - Now_x1) * PI / 180.0f;
+  d_error = (d_Target - Now_x2) * PI / 180.0f;
+
+  // if(abs(error) < 0.3){
+  //   error = 0;
+  // }
 
   s = c * error + d_error;
 
@@ -30,13 +34,25 @@ void Class_SMC::TIM_Data_Updata()
   Last_Target  = Target;
 }
 
+float Class_SMC::Signal(float __s)
+{
+  if (__s > 0)
+    return 1;
+  else if (__s < 0)
+    return -1;
+  else
+    return 0;
+}
+
 float Class_SMC::Sat_Function(float __s)
 {
-  if(fabs(__s) > s_Delta){
-    return __s > 0 ? 1 : -1;
+  float y;
+  y = __s / epsilon;
+  if(fabs(y) < s_Delta){
+    return y;
   }
   else{
-    return __s/s_Delta;
+    return Signal(__s);
   }
 }
 
@@ -45,27 +61,10 @@ void Class_SMC::TIM_Adjust_PeriodElapsedCallback(){
   TIM_Data_Updata();
 
   float Sat = Sat_Function(s);
-  float Torque_ALL = J * PI * (epsilon * Sat + K * s + dd_Target + c * d_error) / 180.0f; 
+  float Torque_ALL = J  * (epsilon * Sat + K * s + dd_Target + c * d_error); 
 
   float I = Torque_ALL / GM6020_TORQUE_CONST;
   Out = I * GM6020_I_TO_OUT;
-
-  if (error > 0.1)
-  {
-    if (Out > 0)
-    {
-      Out += 1000;
-    }
-    else if (Out < 0)
-    {
-      Out -= 1000;
-    }
-
-    if (fabs(error) < 0.08)
-    {
-      Out = 0.0;
-    }
-  }
 
   if(Out > 16384.0f){
     Out = 16384.0f;
