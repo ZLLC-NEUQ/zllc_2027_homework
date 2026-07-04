@@ -245,7 +245,9 @@ void Class_Gimbal_Pitch_Motor_GM6020::TIM_PID_PeriodElapsedCallback()
         }
         PID_Omega.TIM_Adjust_PeriodElapsedCallback();
 
-        Target_Torque = PID_Omega.Get_Out();
+        Target_Torque = -PID_Omega.Get_Out();
+        //7.4日第一次烧录，把输出限小一点，防止一上电猛抽
+        Math_Constrain(&Target_Torque, -3000.0f, 3000.0f);
         Set_Out(Target_Torque + Gravity_Compensate);
     }
     break;

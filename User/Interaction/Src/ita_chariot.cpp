@@ -43,7 +43,7 @@ void Class_Chariot::Init(float __DR16_Dead_Zone)
         Chassis.Init();
 
         // 底盘随动PID环初始化
-        PID_Chassis_Follow.Init(-0.15f, 0.0f, -0.0008f, 0.0f, 2.5f, 5.5f);
+        PID_Chassis_Fllow.Init(-0.15f, 0.0f, -0.0008f, 0.0f, 2.5f, 5.5f);
         //PID_Chassis_Follow.Init(0.f, 0.0f, 0.0f, 0.0f, 2.5f, 5.5f);
 
         
@@ -104,10 +104,21 @@ void Class_Chariot::Init(float __DR16_Dead_Zone)
 // 控制类型字节
 uint8_t control_type;
 float offset_k = -0.041f;
+// 下板调试变量
+volatile uint32_t dbg_rx_0x77_cnt = 0;
+volatile uint8_t dbg_rx_control_type = 0;
+volatile uint8_t dbg_rx_chassis_mode = 0;
+
+volatile float dbg_rx_gimbal_vx = 0.0f;
+volatile float dbg_rx_gimbal_vy = 0.0f;
+volatile float dbg_rx_chassis_vx = 0.0f;
+volatile float dbg_rx_chassis_vy = 0.0f;
+volatile float dbg_rx_pitch = 0.0f;
 // 底盘和云台夹角（弧度制）
 float derta_angle;
 void Class_Chariot::CAN_Chassis_Rx_Gimbal_Callback()
 {
+    dbg_rx_0x77_cnt++;
     Gimbal_Alive_Flag++;
     // 云台坐标系的目标速度
     float gimbal_velocity_x, gimbal_velocity_y;
@@ -135,6 +146,14 @@ void Class_Chariot::CAN_Chassis_Rx_Gimbal_Callback()
     Gimbal_Tx_Pitch_Angle = Math_Int_To_Float(tmp_gimbal_pitch, 0, 0x7FFF, -30.0f, 30.0f);
 
     chassis_control_type = (Enum_Chassis_Control_Type)(control_type & 0x03);
+
+    dbg_rx_control_type = control_type;
+    dbg_rx_chassis_mode = chassis_control_type;
+
+    dbg_rx_gimbal_vx = gimbal_velocity_x;
+    dbg_rx_gimbal_vy = gimbal_velocity_y;
+    dbg_rx_pitch = Gimbal_Tx_Pitch_Angle;
+
     Sprint_Status = (Enum_Sprint_Status)(control_type >> 2 & 0x01);
     // 将原来的Fric_Status解析改为云台控制类型解析
     gimbal_control_type = (Enum_Gimbal_Control_Type)((control_type >> 3) & 0x03);
@@ -184,6 +203,9 @@ void Class_Chariot::CAN_Chassis_Rx_Gimbal_Callback()
     // 设定底盘目标速度
     Chassis.Set_Target_Velocity_X(chassis_velocity_x);
     Chassis.Set_Target_Velocity_Y(chassis_velocity_y);
+
+    dbg_rx_chassis_vx = chassis_velocity_x;
+    dbg_rx_chassis_vy = chassis_velocity_y;
 }
 void Class_Chariot::CAN_Chassis_Rx_Gimbal_Callback_1()
 {
@@ -1139,10 +1161,12 @@ void Class_Chariot::Judge_DR16_Control_Type()
 
 void Class_Chariot::Judge_VT13_Control_Type()
 {
-    if (VT13.Get_Left_X() != 0 ||
-        VT13.Get_Left_Y() != 0 ||
-        VT13.Get_Right_X() != 0 ||
-        VT13.Get_Right_Y() != 0)
+    const float dead = 0.05f;
+
+    if (Math_Abs(VT13.Get_Left_X()) > dead ||
+        Math_Abs(VT13.Get_Left_Y()) > dead ||
+        Math_Abs(VT13.Get_Right_X()) > dead ||
+        Math_Abs(VT13.Get_Right_Y()) > dead)
     {
         VT13_Control_Type = VT13_Control_Type_REMOTE;
     }
@@ -1169,8 +1193,7 @@ void Class_Chariot::Judge_VT13_Control_Type()
     }
     else
     {
-        if (VT13.Get_VT13_Status() == VT13_Status_DISABLE)
-            VT13_Control_Type = VT13_Control_Type_NONE;
+        VT13_Control_Type = VT13_Control_Type_NONE;
     }
 }
 
@@ -1278,6 +1301,11 @@ void Class_Chariot::TIM1msMod50_Alive_PeriodElapsedCallback()
         {
             wheel.TIM_Alive_PeriodElapsedCallback();
         }
+				for (auto &steer : Chassis.Motor_Steer)
+				{
+						steer.TIM_Alive_PeriodElapsedCallback();
+				}
+				
         if (mod50_mod3 % 3 == 0)
         {
             Referee.TIM1msMod50_Alive_PeriodElapsedCallback();
@@ -1287,7 +1315,7 @@ void Class_Chariot::TIM1msMod50_Alive_PeriodElapsedCallback()
             mod50_mod3 = 0;
         }
         // 云台，随动掉线保护
-        if (Motor_Yaw.Get_DJI_Motor_Status() == DJI_Motor_Status_DISABLE || Gimbal_Status == Gimbal_Status_DISABLE)
+        if (Motor_Yaw.Get_LK_Motor_Status() == LK_Motor_Status_DISABLE || Gimbal_Status == Gimbal_Status_DISABLE)
         {
             buzzer_setTask(&buzzer, BUZZER_DEVICE_OFFLINE_PRIORITY);
             Chassis.Set_Chassis_Control_Type(Chassis_Control_Type_DISABLE);

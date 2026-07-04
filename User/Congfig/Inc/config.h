@@ -17,12 +17,12 @@
 /* Exported macros -----------------------------------------------------------*/
 
 //底盘或云台状态
-//#define CHASSIS
-#define GIMBAL
+#define CHASSIS
+//#define GIMBAL
 
 //底盘标定参考正方向角度(数据来源yaw电机)
-#define Reference_Angle  -52.29f
-#define Reference_Radian  (Reference_Angle * PI / 180.f)
+//#define Reference_Angle  -52.29f
+#define Reference_Radian  (-52.29f* PI / 180.f)
 
 //调试或比赛状态
 #define DEBUG
@@ -47,7 +47,7 @@
 //#define USE_DR16
 
 /* 兵种/底盘类型选择*/
-// #define AGV      //舵轮底盘
+#define AGV      //舵轮底盘
 
 
 
