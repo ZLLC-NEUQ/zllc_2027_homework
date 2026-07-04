@@ -187,3 +187,227 @@ cmdPower = k4*ω*τ      // 机械功率
 `crt_chassis` 打包 8 个电机数据 + 定预算 `Max_Power`（来自改到 CAN2 的超电）-> `Power_Task`：算理论功率 -> 转向舵优先、驱动轮吃剩余地分配 -> 反解每个电机的限制扭矩 -> 写回 output -> `crt_chassis` 再 `Set_Out` 下发。
 
 至此底盘“速度指令 -> 解算 -> 功率限制 -> 下发”这条主线读通了
+
+## 学习记录 4：实车联调代码更新（7.4）
+
+> **目标**：把下板舵轮底盘、上/下板通信、MiniPC 协议、VT13 遥控器判定、Pitch 闭环方向和设备在线检测这些关键链路接起来，并加入必要的调试观测变量。
+
+
+### 一、上板到下板 CAN 控制链路调试
+
+当前下板主要通过 CAN2 接收上板发来的底盘控制帧。`tsk_config_and_callback.cpp` 中，`0x77` 被作为上板控制帧处理：
+
+```cpp
+case (0x77): // 留给上板通讯
+{
+    chariot.CAN_Chassis_Rx_Gimbal_Callback();
+}
+break;
+```
+
+在 `CAN_Chassis_Rx_Gimbal_Callback()` 中解析上板下发的控制类型、云台坐标系速度、pitch 角等信息，并把云台坐标系速度转换到底盘坐标系，再写入底盘目标速度：
+
+```cpp
+Chassis.Set_Target_Velocity_X(chassis_velocity_x);
+Chassis.Set_Target_Velocity_Y(chassis_velocity_y);
+```
+
+为了方便在 Debug Watch 窗口确认链路是否真的跑通，新增了这些下板调试变量：
+
+```cpp
+volatile uint32_t dbg_rx_0x77_cnt = 0;
+volatile uint8_t dbg_rx_control_type = 0;
+volatile uint8_t dbg_rx_chassis_mode = 0;
+
+volatile float dbg_rx_gimbal_vx = 0.0f;
+volatile float dbg_rx_gimbal_vy = 0.0f;
+volatile float dbg_rx_chassis_vx = 0.0f;
+volatile float dbg_rx_chassis_vy = 0.0f;
+volatile float dbg_rx_pitch = 0.0f;
+```
+
+调试时可以按这个顺序判断问题在哪一层：
+
+1. `dbg_rx_0x77_cnt` 是否增加：判断下板是否收到上板 CAN 帧；
+2. `dbg_rx_control_type` / `dbg_rx_chassis_mode` 是否变化：判断控制类型是否解析正确；
+3. `dbg_rx_gimbal_vx` / `dbg_rx_gimbal_vy` 是否变化：判断上板是否真的下发速度；
+4. `dbg_rx_chassis_vx` / `dbg_rx_chassis_vy` 是否变化：判断坐标变换和目标速度写入是否正常；
+5. 轮子仍不动时，再继续看底盘模式、alive 标志、电机在线状态和功率限制。
+
+### 二、底盘随动 yaw 电机适配
+
+之前的版本里，底盘随动使用的是 DJI GM6020 yaw 电机对象：
+
+```cpp
+Class_DJI_Motor_GM6020 Motor_Yaw;
+```
+
+当前版本根据实车改为 LK yaw 电机：
+
+```cpp
+Class_LK_Motor Motor_Yaw;
+```
+
+对应地，掉线保护也从 DJI 电机状态判断改成 LK 电机状态判断：
+
+```cpp
+if (Motor_Yaw.Get_LK_Motor_Status() == LK_Motor_Status_DISABLE ||
+    Gimbal_Status == Gimbal_Status_DISABLE)
+{
+    buzzer_setTask(&buzzer, BUZZER_DEVICE_OFFLINE_PRIORITY);
+    Chassis.Set_Chassis_Control_Type(Chassis_Control_Type_DISABLE);
+}
+```
+
+这一步的意义是：底盘随动所需的 yaw 编码器反馈要来自当前车上真实使用的 LK yaw 电机，否则底盘坐标转换会没有可靠的角度来源。
+
+### 三、VT13 遥控器输入判定优化
+
+原逻辑是只要摇杆值“不等于 0”，就认为遥控器正在控制：
+
+```cpp
+if (VT13.Get_Left_X() != 0 ||
+    VT13.Get_Left_Y() != 0 ||
+    VT13.Get_Right_X() != 0 ||
+    VT13.Get_Right_Y() != 0)
+```
+
+实车上摇杆可能有轻微零漂，直接用 `!= 0` 容易误判，一旦遥控器与车连接，云台就剧烈振动。
+当前版本增加了死区：
+
+```cpp
+const float dead = 0.05f;
+
+if (Math_Abs(VT13.Get_Left_X()) > dead ||
+    Math_Abs(VT13.Get_Left_Y()) > dead ||
+    Math_Abs(VT13.Get_Right_X()) > dead ||
+    Math_Abs(VT13.Get_Right_Y()) > dead)
+{
+    VT13_Control_Type = VT13_Control_Type_REMOTE;
+}
+```
+
+这样只有摇杆偏移超过 0.05 时，才认为操作手真的在控制，能减少因为零漂导致的误触发。
+
+### 四、Pitch 闭环方向修正与首次上电限幅
+
+7.3日烧录时，Pitch 上电后出现了猛抽（“三” 中已提过）。当前版本在 `crt_gimbal.cpp` 中把 Pitch 输出方向取反：
+
+```cpp
+Target_Torque = -PID_Omega.Get_Out();
+```
+
+同时加了首次联调用的输出限幅：
+
+```cpp
+Math_Constrain(&Target_Torque, -3000.0f, 3000.0f);
+```
+
+这两个改动的目的不同：
+
+- 取反是为了解决 Pitch 闭环方向问题；
+- 限幅是为了第一次上电更安全，避免 PID 输出过大导致机构猛抽。
+
+后续如果确认方向稳定、参数合适，可以再根据实际需求逐步放开限幅。
+
+### 五、MiniPC CAN 接收协议更新
+
+之前的版本里，MiniPC 接收结构体是把 yaw、pitch、Fire 等内容放在一个包里解析。和算法艾学长沟通后，优化成了两个轴分开发：
+
+- `0xA3`：yaw 包，要求 `axis = 0`；
+- `0xA4`：pitch 包，要求 `axis = 1`。
+
+接收缓存结构体也改成每个轴一份：
+
+```cpp
+struct Struct_MiniPC_Axis_Rx_Cache
+{
+    uint8_t mode;
+    uint8_t seq;
+
+    int16_t angle;
+    int16_t velocity;
+    int16_t acceleration;
+
+    uint8_t new_data;
+};
+```
+
+新的回调接口带上 CAN ID，便于区分 yaw / pitch 两类包：
+
+```cpp
+void Class_MiniPC::CAN_RxCpltCallback(uint32_t can_id, const uint8_t *rx_data)
+```
+
+解析逻辑大致为：
+
+1. 先判断 `rx_data` 是否为空；
+2. 读取 `rx_data[0]` 的最低位作为 `axis`；
+3. `can_id == 0xA3 && axis == 0` 时写入 `Yaw_Rx_Cache`；
+4. `can_id == 0xA4 && axis == 1` 时写入 `Pitch_Rx_Cache`；
+5. 从 8 字节数据中按小端格式解析角度、速度、加速度；
+6. 调用 `Data_Process()` 把弧度制缩放值转换为角度制；
+7. 更新 `Fire`、`Control`、`alive` 等状态。
+
+核心解析如下：
+
+```cpp
+cache->mode = rx_data[0];
+cache->seq = rx_data[1];
+cache->angle = MiniPC_Read_Int16_LE(&rx_data[2]);
+cache->velocity = MiniPC_Read_Int16_LE(&rx_data[4]);
+cache->acceleration = MiniPC_Read_Int16_LE(&rx_data[6]);
+```
+
+`Data_Process()` 中统一用 `1 / 10000` 作为缩放，再从弧度转角度：
+
+```cpp
+const float scale = 1.0f / 10000.0f;
+const float rad_to_deg = 180.0f / PI;
+
+Rx_Angle_Yaw = Yaw_Rx_Cache.angle * scale * rad_to_deg;
+Rx_Angle_Pitch = Pitch_Rx_Cache.angle * scale * rad_to_deg;
+```
+
+为了调试 MiniPC CAN 是否有进帧，还加了全局观测变量：
+
+```cpp
+volatile uint32_t debug_can_id = 0;
+volatile uint8_t debug_rx0 = 0;
+volatile uint8_t debug_rx1 = 0;
+```
+
+**插一嘴：**
+代码里关于“等待 yaw 和 pitch 都到达”“比较 seq 是否一致”“比较 mode 中 shoot/control 是否一致”的保护逻辑目前还处于注释状态。
+我的想法是，现在版本先让链路跑通（算法有点等不及了），后续还需要把同一组 yaw/pitch 数据的同步校验补回来，避免只收到单轴数据也被当成完整数据使用。
+
+### 六、MiniPC 发送帧调整
+
+在 `drv_can.cpp` 中，MiniPC 发送帧改为在周期发送里通过 CAN1 发 `0xA0`：
+
+```cpp
+CAN_Send_Data(&hfdcan1, 0xA0, CAN1_MiniPc_Tx_Data, 8);
+```
+
+同时保留了调试计数 / 状态变量：
+
+```cpp
+volatile uint32_t debug_a0_tx_count = 0;
+volatile uint8_t debug_a0_tx_status = 0xFF;
+```
+
+后续如果怀疑 MiniPC 没收到 MCU 发出的反馈帧，可以先确认这两个变量以及 CAN1 上是否能抓到 `0xA0`。
+
+### 七、当前版本的调试结论
+
+这版代码的核心结论可以概括为：
+
+```text
+超电链路已按实车复核统一为 CAN3；
+CAN3 中补全了超电 0x67 和 MA600 0xD1~0xD4 的派发；
+上板 0x77 控制帧接收链路加入了调试变量；
+底盘随动 yaw 电机对象从 GM6020 改为 LK；
+VT13 遥控器输入判定加入死区；
+Pitch 输出方向取反，并加入首次上电限幅；
+MiniPC 接收协议改为 0xA3 yaw + 0xA4 pitch 双包解析。
+```
