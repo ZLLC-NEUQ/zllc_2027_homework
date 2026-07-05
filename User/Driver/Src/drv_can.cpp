@@ -18,6 +18,8 @@
 /* Private types -------------------------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
+volatile uint32_t debug_a0_tx_count = 0;
+volatile uint8_t debug_a0_tx_status = 0xFF;
 
 Struct_CAN_Manage_Object CAN1_Manage_Object = {0};
 Struct_CAN_Manage_Object CAN2_Manage_Object = {0};
@@ -397,8 +399,7 @@ void TIM_CAN_PeriodElapsedCallback()
 
     if(mod2 == 2)
     {
-        CAN_Send_Data(&hfdcan2, 0xf1, CAN2_0xxf1_Tx_Data, 8);
-        CAN_Send_Data(&hfdcan1, 0xa0, CAN1_MiniPc_Tx_Data, 8);
+        CAN_Send_Data(&hfdcan1, 0xA0, CAN1_MiniPc_Tx_Data, 8);
 			  //CAN_Send_Data(&hfdcan2, 0xf1, CAN2_0xxf1_Tx_Data, 8);
         mod2 = 0;
     } 

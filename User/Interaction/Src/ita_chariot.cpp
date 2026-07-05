@@ -43,7 +43,7 @@ void Class_Chariot::Init(float __DR16_Dead_Zone)
         Chassis.Init();
 
         // 底盘随动PID环初始化
-        PID_Chassis_Follow.Init(-0.15f, 0.0f, -0.0008f, 0.0f, 2.5f, 5.5f);
+        PID_Chassis_Fllow.Init(-0.15f, 0.0f, -0.0008f, 0.0f, 2.5f, 5.5f);
         //PID_Chassis_Follow.Init(0.f, 0.0f, 0.0f, 0.0f, 2.5f, 5.5f);
 
         

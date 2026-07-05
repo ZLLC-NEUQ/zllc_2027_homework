@@ -159,8 +159,10 @@ public:
 
     // 获取yaw电机编码器值 用于底盘和云台坐标系的转换
     // 底盘随动PID环
-    Class_DJI_Motor_GM6020 Motor_Yaw;
+    Class_LK_Motor Motor_Yaw;
     Class_PID PID_Chassis_Fllow;
+
+    Class_IMU Boardc_BMI;
 
 #endif
 
