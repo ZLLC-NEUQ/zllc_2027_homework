@@ -22,9 +22,7 @@
 /* Private function declarations ---------------------------------------------*/
 
 /* Function prototypes -------------------------------------------------------*/
-//
-//感觉booster就加一个摩擦轮就行了，好像不用怎么改，就加了一个摩擦轮
-//
+
 /**
  * @brief 定时器处理函数
  * 这是一个模板, 使用时请根据不同处理情况在不同文件内重新定义
@@ -253,11 +251,12 @@ void Class_Booster::Init()
     Motor_Friction_Right.Init(&hfdcan1, DJI_Motor_ID_0x201, DJI_Motor_Control_Method_OMEGA, 1.0f);
 
     // 摩擦轮电机下
-    Motor_Friction_Down.PID_Omega.Init(100.0f, 0.0f, 0.1f, 0.0f, 3000.0f, Motor_Friction_Down.Get_Output_Max());
-    Motor_Friction_Down.Init(&hfdcan1, DJI_Motor_ID_0x203, DJI_Motor_Control_Method_OMEGA, 1.0f);
+    Motor_Friction_Down.PID_Omega.Init(150.0f, 4.0f, 0.2f, 0.0f, 2000.0f, Motor_Friction_Right.Get_Output_Max());
+    Motor_Friction_Down.Init(&hfdcan1, DJI_Motor_ID_0x201, DJI_Motor_Control_Method_OMEGA, 1.0f);
+
+
 }
 
-uint8_t Swtich_To_Angle_Control_Flag = 0;
 void Class_Booster::Output()
 {
     switch (Booster_Control_Type)
@@ -361,13 +360,13 @@ void Class_Booster::Output()
 
         Motor_Friction_Left.Set_Target_Omega_Radian(Friction_Omega);
         Motor_Friction_Right.Set_Target_Omega_Radian(-Friction_Omega);
-        Motor_Friction_Down.Set_Target_Omega_Radian(Friction_Omega);
+        Motor_Friction_Down.Set_Target_Omega_Radian(-Friction_Omega);
     }
     else
     {
         Motor_Friction_Left.Set_Target_Omega_Radian(0.0f);
         Motor_Friction_Right.Set_Target_Omega_Radian(0.0f);
-        Motor_Friction_Down.Set_Target_Omega_Radian(0.0f);
+         Motor_Friction_Down.Set_Target_Omega_Radian(0.0f);
     }
 }
 

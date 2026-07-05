@@ -13,29 +13,26 @@
 #define CRT_GIMBAL_H
 
 /* Includes ------------------------------------------------------------------*/
-
 #include "dvc_boardc_bmi088.h"
-#include "dvc_imu.h"
-#include "dvc_dmmotor.h"
+#include "dvc_djimotor.h"
 #include "dvc_minipc.h"
-#include "dvc_dmimu.h"
+#include "dvc_imu.h"
 #include "dvc_lkmotor.h"
-
+#include "dvc_dmimu.h"
+#include "dvc_dmmotor.h"
 /* Exported macros -----------------------------------------------------------*/
 
 /* Exported types ------------------------------------------------------------*/
-
 #define LOCK_PITCH 0.0f
 extern float YAW_Reference_Angle;
 extern float YAW_Chassis_Angle;
-
 /**
  * @brief 云台控制类型
  *
  */
 enum Enum_Gimbal_Control_Type :uint8_t
 {
-     Gimbal_Control_Type_DISABLE = 0,
+    Gimbal_Control_Type_DISABLE = 0,
     Gimbal_Control_Type_NORMAL,
     Gimbal_Control_Type_MINIPC,
     Gimbal_Control_type_FOLD,
@@ -50,7 +47,6 @@ struct IMU_Data
     float Omega_Y;
     float Omega_Z;
 };
-
 /**
  * @brief Specialized, yaw轴电机类
  *
@@ -60,7 +56,7 @@ class Class_Gimbal_Yaw_Motor_LK7025 : public Class_LK_Motor
 public:
     //陀螺仪获取云台角速度
     Class_IMU *IMU;
- //Class_Filter_Fourier filtered_target_angle;
+ Class_Filter_Fourier filtered_target_angle;
     inline float Get_Trer_Rad_Yaw();
     inline float Get_True_Gyro_Yaw();
     inline float Get_True_Angle_Yaw();
@@ -74,7 +70,7 @@ protected:
 
     //常量
 
-    //重力补偿
+    // 重力补偿
     float Gravity_Compensate = 0.0f;
 
     //内部变量
@@ -226,8 +222,6 @@ public:
 
     //imu对象
     Class_IMU Boardc_BMI;
-    //外置imu
-    Class_DM_IMU DM_IMU;
 
     Class_MiniPC *MiniPC;
 
@@ -236,8 +230,10 @@ public:
     // yaw轴电机
     Class_Gimbal_Yaw_Motor_LK7025 Motor_Yaw;
 
-    // pitch轴电机
+    // pitch轴电机 2900-4000 俯仰角编码器值
     Class_Gimbal_Pitch_Motor_DM4310 Motor_Pitch;
+
+    // pitch2轴电机
     Class_Gimbal_Pitch_Motor_DM4310 Motor_Pitch_2;
 
     void Init();
@@ -256,10 +252,8 @@ public:
 
 protected:
     //初始化相关常量
-    float Gimbal_Head_Angle;
+
     //常量
-    float CRUISE_SPEED_YAW = 100.f;
-    float CRUISE_SPEED_PITCH = 70.f;
     // yaw轴最小值
     float Min_Yaw_Angle = - 180.0f;
     // yaw轴最大值
@@ -297,8 +291,7 @@ protected:
     float Target_Yaw_Angle = 0.0f;
     // pitch轴角度
     float Target_Pitch_Angle = 0.0f;
-
-    //大pitch轴角度
+    //大pitch角度
     float Target_Pitch_2_Angle = LOCK_PITCH;
 
     //内部函数
@@ -331,7 +324,6 @@ float Class_Gimbal::Get_Target_Pitch_Angle()
 {
     return (Target_Pitch_Angle);
 }
-
 
 /**
  * @brief 获取云台控制类型
@@ -370,26 +362,10 @@ void Class_Gimbal::Set_Target_Pitch_Angle(float __Target_Pitch_Angle)
 {
     Target_Pitch_Angle = __Target_Pitch_Angle;
 }
-
-/**
- * @brief 获取大pitch轴角度
- *
- * @return float 大pitch轴角度
- */
-float Class_Gimbal::Get_Target_Pitch_Angle_2()
-{
-    return (Target_Pitch_2_Angle);
-}
-
-/**
- * @brief 设定大pitch轴角度
- *
- */
 void Class_Gimbal::Set_Target_Pitch_Angle_2(float __Target_Pitch_Angle)
 {
     Target_Pitch_2_Angle = __Target_Pitch_Angle;
 }
-
 
 #endif
 
