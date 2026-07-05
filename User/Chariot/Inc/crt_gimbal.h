@@ -14,15 +14,20 @@
 
 /* Includes ------------------------------------------------------------------*/
 
-#include "dvc_djimotor.h"
-#include "dvc_minipc.h"
+#include "dvc_boardc_bmi088.h"
 #include "dvc_imu.h"
+#include "dvc_dmmotor.h"
+#include "dvc_minipc.h"
+#include "dvc_dmimu.h"
 #include "dvc_lkmotor.h"
 
 /* Exported macros -----------------------------------------------------------*/
 
 /* Exported types ------------------------------------------------------------*/
 
+#define LOCK_PITCH 0.0f
+extern float YAW_Reference_Angle;
+extern float YAW_Chassis_Angle;
 
 /**
  * @brief 云台控制类型
@@ -30,21 +35,32 @@
  */
 enum Enum_Gimbal_Control_Type :uint8_t
 {
-    Gimbal_Control_Type_DISABLE = 0,
+     Gimbal_Control_Type_DISABLE = 0,
     Gimbal_Control_Type_NORMAL,
     Gimbal_Control_Type_MINIPC,
+    Gimbal_Control_type_FOLD,
+};
+
+struct IMU_Data
+{
+    float Pitch;
+    float Roll;
+    float Yaw;
+    float Omega_X;
+    float Omega_Y;
+    float Omega_Z;
 };
 
 /**
  * @brief Specialized, yaw轴电机类
  *
  */
-class Class_Gimbal_Yaw_Motor_GM6020 : public Class_DJI_Motor_GM6020
+class Class_Gimbal_Yaw_Motor_LK7025 : public Class_LK_Motor
 {
 public:
     //陀螺仪获取云台角速度
     Class_IMU *IMU;
- Class_Filter_Fourier filtered_target_angle;
+ //Class_Filter_Fourier filtered_target_angle;
     inline float Get_Trer_Rad_Yaw();
     inline float Get_True_Gyro_Yaw();
     inline float Get_True_Angle_Yaw();
@@ -57,6 +73,9 @@ protected:
     //初始化相关常量
 
     //常量
+
+    //重力补偿
+    float Gravity_Compensate = 0.0f;
 
     //内部变量
     float True_Rad_Yaw = 0.0f;
@@ -71,17 +90,17 @@ protected:
     //内部函数
 };
 
-float Class_Gimbal_Yaw_Motor_GM6020::Get_Trer_Rad_Yaw()
+float Class_Gimbal_Yaw_Motor_LK7025::Get_Trer_Rad_Yaw()
 {
     return (True_Rad_Yaw);
 } 
 
-float Class_Gimbal_Yaw_Motor_GM6020::Get_True_Gyro_Yaw()
+float Class_Gimbal_Yaw_Motor_LK7025::Get_True_Gyro_Yaw()
 {
     return (True_Gyro_Yaw);
 }
 
-float Class_Gimbal_Yaw_Motor_GM6020::Get_True_Angle_Yaw()
+float Class_Gimbal_Yaw_Motor_LK7025::Get_True_Angle_Yaw()
 {
     return (True_Angle_Yaw);
 }
@@ -90,7 +109,7 @@ float Class_Gimbal_Yaw_Motor_GM6020::Get_True_Angle_Yaw()
  * @brief Specialized, pitch轴电机类
  *
  */
-class Class_Gimbal_Pitch_Motor_GM6020 : public Class_DJI_Motor_GM6020
+class Class_Gimbal_Pitch_Motor_DM4310 : public Class_DM_Motor_J4310
 {
 public:
     //陀螺仪获取云台角速度
@@ -126,17 +145,17 @@ protected:
     //内部函数
 };
 
-float Class_Gimbal_Pitch_Motor_GM6020::Get_True_Rad_Pitch()
+float Class_Gimbal_Pitch_Motor_DM4310::Get_True_Rad_Pitch()
 {
     return (True_Rad_Pitch);
 }
 
-float Class_Gimbal_Pitch_Motor_GM6020::Get_True_Angle_Pitch()
+float Class_Gimbal_Pitch_Motor_DM4310::Get_True_Angle_Pitch()
 {
     return (True_Angle_Pitch);
 }
 
-float Class_Gimbal_Pitch_Motor_GM6020::Get_True_Gyro_Pitch()
+float Class_Gimbal_Pitch_Motor_DM4310::Get_True_Gyro_Pitch()
 {
     return (True_Gyro_Pitch);
 }
@@ -207,36 +226,40 @@ public:
 
     //imu对象
     Class_IMU Boardc_BMI;
+    //外置imu
+    Class_DM_IMU DM_IMU;
 
     Class_MiniPC *MiniPC;
 
     /*后期yaw pitch这两个类要换成其父类，大疆电机类*/
 
     // yaw轴电机
-    Class_Gimbal_Yaw_Motor_GM6020 Motor_Yaw;
+    Class_Gimbal_Yaw_Motor_LK7025 Motor_Yaw;
 
-    // pitch轴电机 2900-4000 俯仰角编码器值
-    Class_Gimbal_Pitch_Motor_GM6020 Motor_Pitch;
-
-    // pithc轴电机
-    Class_Gimbal_Pitch_Motor_LK6010 Motor_Pitch_LK6010;
+    // pitch轴电机
+    Class_Gimbal_Pitch_Motor_DM4310 Motor_Pitch;
+    Class_Gimbal_Pitch_Motor_DM4310 Motor_Pitch_2;
 
     void Init();
 
     inline float Get_Target_Yaw_Angle();
     inline float Get_Target_Pitch_Angle();
+    inline float Get_Target_Pitch_Angle_2();
     inline Enum_Gimbal_Control_Type Get_Gimbal_Control_Type();
 
     inline void Set_Gimbal_Control_Type(Enum_Gimbal_Control_Type __Gimbal_Control_Type);
     inline void Set_Target_Yaw_Angle(float __Target_Yaw_Angle);
     inline void Set_Target_Pitch_Angle(float __Target_Pitch_Angle);
+    inline void Set_Target_Pitch_Angle_2(float __Target_Pitch_Angle);
 
     void TIM_Calculate_PeriodElapsedCallback();
 
 protected:
     //初始化相关常量
-
+    float Gimbal_Head_Angle;
     //常量
+    float CRUISE_SPEED_YAW = 100.f;
+    float CRUISE_SPEED_PITCH = 70.f;
     // yaw轴最小值
     float Min_Yaw_Angle = - 180.0f;
     // yaw轴最大值
@@ -247,9 +270,17 @@ protected:
     float Yaw_Half_Turns;
 
     // pitch轴最小值
-    float Min_Pitch_Angle = -15.0f;
+    float Min_Pitch_Angle = -20.0f;
     // pitch轴最大值
-    float Max_Pitch_Angle = 30.0f ; //多10°
+    float Max_Pitch_Angle = 17.7f ; //多10°
+    // 大pitch轴最小值
+    float Min_Pitch_2_Angle = LOCK_PITCH;
+    // 大pitch轴最大值
+    float Max_Pitch_2_Angle = LOCK_PITCH + 1.45f;
+    // 电磁铁固定角度
+    float Lock_Pitch_Angle = LOCK_PITCH;
+    // 云台折叠角度
+    float Fold_Pitch_Angle = LOCK_PITCH;
 
     //内部变量 
 
@@ -266,6 +297,9 @@ protected:
     float Target_Yaw_Angle = 0.0f;
     // pitch轴角度
     float Target_Pitch_Angle = 0.0f;
+
+    //大pitch轴角度
+    float Target_Pitch_2_Angle = LOCK_PITCH;
 
     //内部函数
 

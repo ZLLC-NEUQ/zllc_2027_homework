@@ -47,7 +47,7 @@
 //#define USE_DR16
 
 /* 兵种/底盘类型选择*/
-// #define AGV      //舵轮底盘
+#define AGV      //舵轮底盘
 
 
 
