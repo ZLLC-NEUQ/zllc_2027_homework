@@ -1197,6 +1197,8 @@ public:
     inline void Set_Booster_17mm_1_Heat_CD(uint16_t __Booster_17mm_1_Heat_CD);
     inline void Set_Booster_17mm_1_Heat_Max(uint16_t __Booster_17mm_1_Heat_Max);
     inline void Set_Booster_Speed(float __booster_speed);
+    inline void Set_Booster_42mm_Heat(uint16_t __Booster_42mm_Heat);
+    inline void Set_Booster_42mm_Heat_Max(uint16_t __Booster_42mm_Heat_Max);
 		
     #endif
 

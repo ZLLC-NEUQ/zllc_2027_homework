@@ -211,6 +211,7 @@ struct Struct_MiniPC_Tx_Data
 struct Pack_tx_t
 {
     int16_t q[4];
+    float yaw_from_encoder;
 } __attribute__((packed));
 /**
  * @brief 接收数据包
@@ -238,6 +239,15 @@ class Class_MiniPC
 public:
     void Init(FDCAN_HandleTypeDef *hcan);
 
+
+    inline uint8_t Get_Mode();
+    inline void Set_Lidar_if_Lob(uint8_t __Lidar_if_Lob);
+    inline uint8_t GetLobPoint() { return lob_point; }
+    inline void SetLobMode(bool enable, uint8_t point = 0);
+    inline void SetLobPoint(uint8_t point_) { lob_point = point_; }
+    inline void Set_Bullet_Speed(float __Bullet_Speed);
+    inline void Set_Yaw_Encoder(float __Yaw_Encoder);
+
     inline Enum_MiniPC_Status Get_MiniPC_Status();
     //inline Enum_Antispin_Type Get_Antispin_Type();
     inline float Get_Chassis_Target_Velocity_X();
@@ -258,6 +268,10 @@ public:
     inline float Get_Distance();
     inline Enum_MiniPC_Move_Control_Mode Get_Move_Control_Mode();
 
+    inline uint8_t Get_Lidar_Lob_Stability();
+
+
+
     inline void Set_Game_Stage(Enum_MiniPC_Game_Stage __Game_Stage);
     inline void Set_Chassis_Now_Velocity_X(float __Chassis_Now_Velocity_X);
     inline void Set_Chassis_Now_Velocity_Y(float __Chassis_Now_Velocity_Y);
@@ -271,6 +285,9 @@ public:
     inline void Set_Self_Color(Enum_MiniPC_Self_Color __Self_Color);
     inline void Set_Outpost_Status(Enum_MiniPC_Data_Status __Outpost_Status);
     inline void Set_Outpost_Protect_Status(Enum_MiniPC_Data_Status __Outpost_Protect_Status);
+
+    inline void Set_Bullet_Num(uint16_t __Bullet_Num);
+
     //inline void Set_Antispin_Type(Enum_Antispin_Type __Antispin_Type);
     void Append_CRC16_Check_Sum(uint8_t *pchMessage, uint32_t dwLength);
     bool Verify_CRC16_Check_Sum(const uint8_t *pchMessage, uint32_t dwLength);
@@ -322,6 +339,9 @@ protected:
     Enum_MiniPC_Status MiniPC_Status = MiniPC_Status_DISABLE;
     // 迷你主机对外接口信息
     Struct_MiniPC_Rx_Data Data_NUC_To_MCU;
+
+    uint16_t Tx_Bullet_Num;
+
    
     Pack_tx_t Pack_Tx_CAN;
     Pack_rx_t Pack_Rx;
@@ -335,8 +355,19 @@ protected:
     float Rx_Angle_Pitch;
     float Rx_Angle_Yaw;
 
+    uint8_t Mode; // 自瞄控制模式:0-不控制，保持云台当前角度状态，1-控制云台角度状态但是不开火 2-控制云台角度状态且开火
+    uint8_t Lidar_if_Lob;           // 是否启用部署 1-启用自瞄 2-启用雷达
+    uint8_t lob_point = 0;  // 吊射点位：0 或 1
+    bool lob_exec_enabled = false;   // 下位机是否启用吊射执行
+    float Tx_Bullet_Speed;
+    Pack_tx_t Pack_Tx;
+    //Pack_rx_t Pack_Rx;
+
+
     uint8_t Fire;
     uint8_t alive;
+
+    uint8_t Lidar_Lob_Stability;    // 部署命中可信度
 
     const float g = 9.8;         // 重力加速度
     const float bullet_v = 21.7; // 子弹速度
@@ -521,6 +552,34 @@ inline uint8_t Class_MiniPC::Get_Alive_Status()
     return alive;
 }
 
+inline uint8_t Class_MiniPC::Get_Mode()
+{
+    return (Mode);
+}
+
+/**
+ * @brief 获取雷达部署命中可信度
+ * 
+ * @return uint8_t 
+ */
+inline uint8_t Class_MiniPC::Get_Lidar_Lob_Stability()
+{
+    return Lidar_Lob_Stability;
+}
+
+/**
+ * @brief 设定雷达是否启用部署
+ * 
+ * @param __Lidar_if_Lob 
+ */
+void Class_MiniPC::Set_Lidar_if_Lob(uint8_t __Lidar_if_Lob)
+{
+    Lidar_if_Lob = __Lidar_if_Lob;
+}
+
+
+
+
 /**
  * @brief
  *
@@ -653,6 +712,16 @@ void Class_MiniPC::Set_Outpost_Protect_Status(Enum_MiniPC_Data_Status __Outpost_
 }
 
 /**
+ * @brief 设定子弹发射数量
+ * 
+ * @param __Bullet_Num 
+ */
+void Class_MiniPC::Set_Bullet_Num(uint16_t __Bullet_Num)
+{
+    Tx_Bullet_Num = __Bullet_Num;
+}
+
+/**
  * @brief 发送数据处理
  *
  */
@@ -662,6 +731,27 @@ void Class_MiniPC::Transform_Angle_Tx()
     Tx_Angle_Roll = - IMU->Get_Angle_Pitch();
     Tx_Angle_Yaw = IMU->Get_Angle_Yaw();
     //Tx_Angle_Gyro_Yaw = IMU->Get_Gyro_Yaw() * 57.3f;
+}
+
+/**
+ * @brief 设定发射给上位机的子弹速度
+ * 
+ * @param __Bullet_Speed 
+ */
+void Class_MiniPC::Set_Bullet_Speed(float __Bullet_Speed)
+{
+    Tx_Bullet_Speed = __Bullet_Speed;
+}
+
+void Class_MiniPC::Set_Yaw_Encoder(float __Yaw_Encoder)
+{
+    Pack_Tx.yaw_from_encoder = __Yaw_Encoder;
+}
+
+
+void Class_MiniPC::SetLobMode(bool enable, uint8_t point) {
+    lob_exec_enabled = enable;
+    lob_point = (point == 0) ? 0 : 1;
 }
 
 

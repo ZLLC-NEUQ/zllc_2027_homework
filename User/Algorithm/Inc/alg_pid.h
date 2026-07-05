@@ -56,6 +56,8 @@ public:
     inline void Set_Now(float __Now);
     inline void Set_Integral_Error(float __Integral_Error);
 
+    inline void Set_PID_Constants(float __K_P, float __K_I, float __K_D);
+
     void TIM_Adjust_PeriodElapsedCallback();
 
 protected:
@@ -266,6 +268,19 @@ void Class_PID::Set_Integral_Error(float __Integral_Error)
     Integral_Error = __Integral_Error;
 }
 
+/**
+ * @brief 设置PID的三个主要参数
+ * 
+ * @param __K_P 比例系数
+ * @param __K_I 积分系数
+ * @param __K_D 微分系数
+ */
+void Class_PID::Set_PID_Constants(float __K_P, float __K_I, float __K_D)
+{
+    K_P = __K_P;
+    K_I = __K_I;
+    K_D = __K_D;
+}
 #endif
 
 /************************ COPYRIGHT(C) USTC-ROBOWALKER **************************/

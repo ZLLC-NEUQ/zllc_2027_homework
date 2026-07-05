@@ -116,6 +116,14 @@ extern uint8_t CAN2_Gimbal_Tx_Chassis_Data_1[8]; // 云台给底盘发送缓冲�
 extern uint8_t CAN2_Chassis_Tx_Gimbal_Data_1[8]; // 底盘给云台发送缓冲区
 extern uint8_t CAN2_Gimbal_Tx_Chassis_Data_2[8]; // 云台给底盘发送缓冲区
 
+
+extern uint8_t CAN3_Chassis_Tx_Gimbal_Data[8];   //底盘给云台发送缓冲区
+extern uint8_t CAN3_Gimbal_Tx_Chassis_Data[8];  //云台给底盘发送缓冲区
+extern uint8_t CAN3_Chassis_Tx_Gimbal_Data_1[8];   //底盘给云台发送缓冲区
+extern uint8_t CAN3_Gimbal_Tx_Chassis_Data_1[8];  //云台给底盘发送缓冲区
+extern uint8_t CAN3_Sentry_CMD_Data[8];   //云台给底盘发送缓冲区
+
+
 extern uint8_t CAN3_0x1ff_Tx_Data[];
 extern uint8_t CAN3_0x1fe_Tx_Data[];
 extern uint8_t CAN3_0x200_Tx_Data[];

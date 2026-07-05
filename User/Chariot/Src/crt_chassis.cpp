@@ -77,6 +77,73 @@ void Class_Tricycle_Chassis::Init(float __Velocity_X_Max, float __Velocity_Y_Max
 }
 
 /**
+ * @brief 底盘初始化
+ *
+ * @param __Speed 底盘速度限制最大值
+ */
+void Class_HybridTrackLeg_Chassis::Init(float __Velocity_X_Max, float __Velocity_Y_Max, float __Omega_Max)
+{
+    // 超级电容初始化
+
+    Velocity_X_Max = __Velocity_X_Max;
+    Velocity_Y_Max = __Velocity_Y_Max;
+    Omega_Max = __Omega_Max;
+
+    // 斜坡函数加减速速度X  控制周期1ms
+    Slope_Velocity_X.Init(0.005f, 0.01f);
+    // 斜坡函数加减速速度Y  控制周期1ms
+    Slope_Velocity_Y.Init(0.005f, 0.01f);
+    //  斜坡函数加减速角度
+    Slope_Position.Init(0.0014f, 0.0028f);
+    // 斜坡函数加减速角速度
+    Slope_Omega.Init(0.05f, 0.05f);
+
+    // imu初始化
+    // BoardDM_BMI.Init();
+    // 过热检测状态机初始化
+    //FSM_OverHeated_Detect.Chassis = this;
+    //FSM_OverHeated_Detect.Init(2, 0);
+
+    // 轮向电机PID初始化
+    Motor_Wheel[0].PID_Omega.Init(1000.0f, 0.0f, 0.0f, 0.0f, Motor_Wheel[0].Get_Output_Max(), Motor_Wheel[0].Get_Output_Max());
+    Motor_Wheel[1].PID_Omega.Init(1000.0f, 0.0f, 0.0f, 0.0f, Motor_Wheel[1].Get_Output_Max(), Motor_Wheel[1].Get_Output_Max());
+    Motor_Wheel[2].PID_Omega.Init(1000.0f, 0.0f, 0.0f, 0.0f, Motor_Wheel[2].Get_Output_Max(), Motor_Wheel[2].Get_Output_Max());
+    Motor_Wheel[3].PID_Omega.Init(1000.0f, 0.0f, 0.0f, 0.0f, Motor_Wheel[3].Get_Output_Max(), Motor_Wheel[3].Get_Output_Max());
+    // 轮向电机ID初始化
+    Motor_Wheel[0].Init(&hfdcan1, DJI_Motor_ID_0x201);
+    Motor_Wheel[1].Init(&hfdcan1, DJI_Motor_ID_0x202);
+    Motor_Wheel[2].Init(&hfdcan1, DJI_Motor_ID_0x203);
+    Motor_Wheel[3].Init(&hfdcan1, DJI_Motor_ID_0x204);
+
+    // 关节电机PID初始化
+    // DM速度位置控制模式Kp、Ki参数需要用上位机调节
+    //Motor_Leg[0].PID_Posture.Init(1.0f, 0.0f, 0.0f, 0.0f);
+    //Motor_Leg[1].PID_Posture.Init(1.0f, 0.0f, 0.0f, 0.0f);
+    // 关节电机ID初始化
+    //Motor_Joint[0].Init(&hfdcan2, DM_Motor_ID_0xA1, DM_Motor_Control_Method_POSITION_OMEGA, 0, PI, 20.94359f, 20.0f);
+    //Motor_Joint[1].Init(&hfdcan2, DM_Motor_ID_0xA2, DM_Motor_Control_Method_POSITION_OMEGA, 0, PI, 20.94359f, 20.0f);
+    //Motor_Leg[0].Init(&hfdcan2, DM_Motor_ID_0xA1, DM_Motor_Control_Method_MIT_POSITION, 0, PI, 20.94359f, 20.0f);
+    //Motor_Leg[1].Init(&hfdcan2, DM_Motor_ID_0xA2, DM_Motor_Control_Method_MIT_POSITION, 0, PI, 20.94359f, 20.0f);
+
+    // 履带驱动电机PID初始化
+    // Motor_Track[0].PID_Omega.Init(1500.0f, 50.0f, 0.0f, 0.0f, Motor_Track[0].Get_Output_Max(), Motor_Track[0].Get_Output_Max());
+    // Motor_Track[1].PID_Omega.Init(1250.0f, 50.0f, 0.0f, 0.0f, Motor_Track[1].Get_Output_Max(), Motor_Track[1].Get_Output_Max()); // 需调参
+    // // 履带电机ID初始化
+    // Motor_Track[0].Init(&hfdcan2, DJI_Motor_ID_0x201);
+    // Motor_Track[1].Init(&hfdcan2, DJI_Motor_ID_0x202);
+
+    // // 底部导轮电机PID初始化
+    // Motor_Guider[0].PID_Omega.Init(650.0f, 10.0f, 0.0f, 0.0f, Motor_Guider[0].Get_Output_Max(), Motor_Guider[0].Get_Output_Max());
+    // Motor_Guider[1].PID_Omega.Init(700.0f, 10.0f, 0.0f, 0.0f, Motor_Guider[1].Get_Output_Max(), Motor_Guider[1].Get_Output_Max()); // 需调参
+    // // 底部导轮电机ID初始化
+    // Motor_Guider[0].Init(&hfdcan2, DJI_Motor_ID_0x203);
+    // Motor_Guider[1].Init(&hfdcan2, DJI_Motor_ID_0x204);
+
+    // 底盘控制方式初始化
+    Chassis_Control_Type = Chassis_Control_Type_DISABLE;
+}
+
+/**
  * @brief 速度解算
  *
  */
@@ -259,5 +326,121 @@ void Class_Tricycle_Chassis::TIM_Calculate_PeriodElapsedCallback(Enum_Sprint_Sta
     memcpy(CAN_Supercap_Tx_Data+4,&tmp,1);
 
 }
+/**
+ * @brief TIM定时器中断计算回调函数
+ *
+ */
+void Class_HybridTrackLeg_Chassis::TIM_Calculate_PeriodElapsedCallback(Enum_Sprint_Status __Sprint_Status)
+{
+#ifdef SPEED_SLOPE
+    // 斜坡函数计算用于速度解算初始值获取
+    Slope_Velocity_X.Set_Target(Target_Velocity_X);
+    Slope_Velocity_X.TIM_Calculate_PeriodElapsedCallback();
 
+    Slope_Velocity_Y.Set_Target(Target_Velocity_Y);
+    Slope_Velocity_Y.TIM_Calculate_PeriodElapsedCallback();
+
+    Slope_Omega.Set_Target(Target_Omega);
+    Slope_Omega.TIM_Calculate_PeriodElapsedCallback();
+
+#endif
+    // 过温保护
+    // FSM_OverHeated_Detect.Reload_TIM_Status_PeriodElapsedCallback();
+    // Chassis_SglRound_Angle = Get_Chassis_Coordinate_System_Angle_Rad();
+    // // 底盘给云台发消息
+    // CAN_Chassis_Tx_Gimbal_Callback();
+    // CAN_Chassis_Tx_Gimbal_Callback_1();
+    // // 底盘Omega控制
+    // Control_Chassis_Omega_TIM_PeriodElapsedCallback();
+    Speed_Resolution();
+    // 位姿切换
+    //Switch_Pose();
+
+#ifdef POWER_CONTROL
+    Power_Management.Max_Power = Supercap.Get_Chassis_Device_LimitPower();
+
+    //Power_Limit.Power_Task(Power_Management);
+
+    for (int i = 0, j = 0; i < 4; i += 2, ++j)
+    {
+        Power_Management.Motor_Data[i].feedback_omega = Motor_Track[j].Get_Now_Omega_Radian() * M3508_REDUATION * RAD_TO_RPM;
+        Power_Management.Motor_Data[i].feedback_torque = Motor_Track[j].Get_Now_Torque() * M3508_CMD_CURRENT_TO_TORQUE;
+        Power_Management.Motor_Data[i].pid_output = Motor_Track[j].Get_Out();
+        Power_Management.Motor_Data[i].torque = Motor_Track[j].Get_Out() * M3508_CMD_CURRENT_TO_TORQUE;
+        //Motor_Track[j].Reset_Out_And_Output(Power_Management.Motor_Data[i].output);
+    }
+#endif
+}
+
+void Class_HybridTrackLeg_Chassis::Speed_Resolution()
+{
+    switch (Chassis_Control_Type)
+    {
+    case (Chassis_Control_Type_DISABLE):
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            Motor_Wheel[i].Set_DJI_Motor_Control_Method(DJI_Motor_Control_Method_OPENLOOP);
+            Motor_Wheel[i].PID_Omega.Set_Integral_Error(0.0f);
+            Motor_Wheel[i].Set_Target_Omega_Radian(0.0f);
+            Motor_Wheel[i].Set_Out(0.0f);
+        }
+        break;
+    }
+    case (Chassis_Control_Type_SPIN_Positive):
+    case (Chassis_Control_Type_SPIN_Negative):
+    case (Chassis_Control_Type_FLLOW):
+    {
+        // 电机模式配置
+        // 轮向电机
+        for (int i = 0; i < 4; i++)
+        {
+            Motor_Wheel[i].Set_DJI_Motor_Control_Method(DJI_Motor_Control_Method_OMEGA);
+        }
+
+        // 底盘限速
+        if (Velocity_X_Max != 0)
+        {
+            Math_Constrain(&Target_Velocity_X, -Velocity_X_Max, Velocity_X_Max);
+        }
+        if (Velocity_Y_Max != 0)
+        {
+            Math_Constrain(&Target_Velocity_Y, -Velocity_Y_Max, Velocity_Y_Max);
+        }
+        if (Omega_Max != 0)
+        {
+            Math_Constrain(&Target_Omega, -Omega_Max, Omega_Max);
+        }
+#ifdef SPEED_SLOPE
+        // 速度换算，正运动学分解
+        float motor1_temp_linear_vel = Slope_Velocity_Y.Get_Out() - Slope_Velocity_X.Get_Out() + Slope_Omega.Get_Out() * (HALF_WIDTH + HALF_LENGTH);
+        float motor2_temp_linear_vel = Slope_Velocity_Y.Get_Out() + Slope_Velocity_X.Get_Out() - Slope_Omega.Get_Out() * (HALF_WIDTH + HALF_LENGTH);
+        float motor3_temp_linear_vel = Slope_Velocity_Y.Get_Out() + Slope_Velocity_X.Get_Out() + Slope_Omega.Get_Out() * (HALF_WIDTH + HALF_LENGTH);
+        float motor4_temp_linear_vel = Slope_Velocity_Y.Get_Out() - Slope_Velocity_X.Get_Out() - Slope_Omega.Get_Out() * (HALF_WIDTH + HALF_LENGTH);
+#else
+        // 速度换算，正运动学分解
+        float motor1_temp_linear_vel = Target_Velocity_Y - Target_Velocity_X + Target_Omega * (HALF_WIDTH + HALF_LENGTH);
+        float motor2_temp_linear_vel = Target_Velocity_Y + Target_Velocity_X - Target_Omega * (HALF_WIDTH + HALF_LENGTH);
+        float motor3_temp_linear_vel = Target_Velocity_Y + Target_Velocity_X + Target_Omega * (HALF_WIDTH + HALF_LENGTH);
+        float motor4_temp_linear_vel = Target_Velocity_Y - Target_Velocity_X - Target_Omega * (HALF_WIDTH + HALF_LENGTH);
+#endif
+        // 线速度 cm/s  转角速度  RAD
+        float motor1_temp_rad = motor1_temp_linear_vel * VEL2RAD;
+        float motor2_temp_rad = motor2_temp_linear_vel * VEL2RAD;
+        float motor3_temp_rad = motor3_temp_linear_vel * VEL2RAD;
+        float motor4_temp_rad = motor4_temp_linear_vel * VEL2RAD;
+        // 角速度*减速比  设定目标 直接给到电机输出轴
+        Motor_Wheel[0].Set_Target_Omega_Radian(motor2_temp_rad);
+        Motor_Wheel[1].Set_Target_Omega_Radian(-motor1_temp_rad);
+        Motor_Wheel[2].Set_Target_Omega_Radian(-motor3_temp_rad);
+        Motor_Wheel[3].Set_Target_Omega_Radian(motor4_temp_rad);
+
+        for (int i = 0; i < 4; i++)
+        {
+            Motor_Wheel[i].TIM_PID_PeriodElapsedCallback();
+        }
+        break;
+    }
+    }
+}
 /************************ COPYRIGHT(C) USTC-ROBOWALKER **************************/

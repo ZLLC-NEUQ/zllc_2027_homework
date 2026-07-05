@@ -6,6 +6,7 @@
 #include "dvc_referee.h"
 
 #define PI 3.14159f
+#define PI2 2 * PI
 #define DMA_FLAG_TCIF4 ((uint32_t)0x20000020)
 /*��Ļ����*/
 #define SCREEN_WIDTH 1080
@@ -204,6 +205,9 @@ typedef struct
 	float Supercap_Voltage;
 	float Pitch_Angle;
 	float Chassis_Gimbal_Diff;
+	uint8_t Radar_if_Ready;
+	uint8_t Launcher_Mode;
+	float Yaw_Angle;
 
 } JudgeReceive_t;
 

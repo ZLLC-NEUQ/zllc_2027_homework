@@ -29,6 +29,19 @@
 class Class_Chariot;
 /* Exported types ------------------------------------------------------------*/
 
+
+/**
+ * @brief 底盘逻辑方向枚举
+ * 
+ */
+enum Enum_Chassis_Logics_Direction : uint8_t
+{
+    Chassis_Logic_Direction_Positive = 0, // 履带侧
+    Chassis_Logic_Direction_Negative, // 腿侧
+};
+
+
+//
 /**
  * @brief 云台Pitch状态枚举
  *
@@ -98,6 +111,24 @@ enum Enum_Gimbal_Status
 };
 
 /**
+ * @brief 自瞄控制打弹类型
+ * 
+ */
+enum Enum_AimShoot_Control_Type
+{
+    Aim_disallowed =0,
+    Aim_allowed,
+};
+
+enum Enum_MiniPC_Mode
+{
+    MiniPC_DISABLE = 0,
+    MiniPC_AIMER,
+    MiniPC_RADAR,
+};
+
+
+/**
  * @brief DR16控制数据来源
  *
  */
@@ -159,7 +190,9 @@ public:
 
     // 获取yaw电机编码器值 用于底盘和云台坐标系的转换
     // 底盘随动PID环
-    Class_DJI_Motor_GM6020 Motor_Yaw;
+    //Class_DJI_Motor_GM6020 Motor_Yaw;
+    Class_DM_Motor_J4310 Motor_Yaw_DM4310;
+    
     Class_PID PID_Chassis_Fllow;
 
 #endif
@@ -167,7 +200,8 @@ public:
     // 裁判系统
     Class_Referee Referee;
     // 底盘
-    Class_Tricycle_Chassis Chassis;
+    //Class_Tricycle_Chassis Chassis;
+    Class_HybridTrackLeg_Chassis Chassis;
 
     // 遥控器
     Class_DR16 DR16;
@@ -191,7 +225,8 @@ public:
     void Init(float __DR16_Dead_Zone = 0);
 
 #ifdef CHASSIS
-
+    float Get_Chassis_Coordinate_System_Angle_Rad();
+    void Control_Chassis_Omega_TIM_PeriodElapsedCallback();
     void CAN_Chassis_Rx_Gimbal_Callback();
     void CAN_Chassis_Tx_Gimbal_Callback();
     void CAN_Chassis_Rx_Gimbal_Callback_1();
@@ -201,6 +236,9 @@ public:
     uint16_t Booster_fric_omega_right = 0;
 		uint16_t Booster_bullet_num_before=0;
 		uint16_t Booster_bullet_num=0;
+
+        inline void  Set_Gimbal_Pitch_Angle(float __Angle);
+        inline void Set_Gimbal_Yaw_Angle(float __Angle);
 #elif defined(GIMBAL)
 
     inline void DR16_Offline_Cnt_Plus();
@@ -234,12 +272,21 @@ public:
     void TIM1msMod50_Alive_PeriodElapsedCallback();
 
     // 底盘云台通讯变量
+    //一键掉头
+    Enum_Chassis_Logics_Direction Chassis_Logics_Direction = Chassis_Logic_Direction_Positive;
     // 冲刺
     Enum_Sprint_Status Sprint_Status = Sprint_Status_DISABLE;
     // 弹仓开关
     Enum_Bulletcap_Status Bulletcap_Status = Bulletcap_Status_CLOSE;
     // 摩擦轮开关
     Enum_Fric_Status Fric_Status = Fric_Status_CLOSE;
+    //自瞄打弹开关
+    Enum_AimShoot_Control_Type Aim_Status = Aim_disallowed;
+     //上位机控制模式
+    Enum_MiniPC_Mode MiniPC_Mode = MiniPC_DISABLE;
+    //超级电容超级放电状态
+    Enum_Supercap_Control_Status  Supercap_Control_Status = Supercap_Control_Status_DISABLE;
+
     // 上位机下手控开关
     Enum_MiniPC_User_Status User_Status = User_Open;
     // 自瞄锁住状态
@@ -266,12 +313,17 @@ protected:
 
 #ifdef CHASSIS
     // 底盘标定参考正方向角度(数据来源yaw电机)
-    float Reference_Angle =2.34929156;
+    float Reference_Angle =  1.2372514f;
     // float Reference_Angle =2.34929156 -0.52f;
     // 小陀螺云台坐标系稳定偏转角度 用于矫正
     float Offset_Angle = 0.0f; // 7.5°
     // 底盘转换后的角度（数据来源yaw电机）
     float Chassis_Angle;
+    //化归为-PI到PI后的底盘角度
+    float Chassis_SglRound_Angle;
+    //获取云台的IMU yaw轴角度
+        float Yaw_IMU_Angle;
+        float Pitch_IMU_Angle;
     // 写变量
     uint32_t Gimbal_Alive_Flag = 0;
     uint32_t Pre_Gimbal_Alive_Flag = 0;
@@ -280,11 +332,15 @@ protected:
 #endif
  
 #ifdef GIMBAL
+
+    // 角度目标值
+        float tmp_gimbal_yaw, tmp_gimbal_pitch;
     // 遥控器拨动的死区, 0~1
     float DR16_Dead_Zone;
     // 常量
     // 键鼠模式按住shift 最大速度缩放系数
     float DR16_Mouse_Chassis_Shift = 2.0f;
+    float VT13_Mouse_Chassis_Shift = 2.0f;
     // 舵机占空比 默认关闭弹舱
     uint16_t Compare = 400;
     // DR16底盘加速灵敏度系数(0.001表示底盘加速度最大为1m/s2)
@@ -364,6 +420,23 @@ protected:
 /* Exported variables --------------------------------------------------------*/
 
 /* Exported function declarations --------------------------------------------*/
+
+
+#ifdef GIMBAL
+void Class_Referee::Set_Booster_42mm_Heat_Max(uint16_t __Booster_42mm_Heat_Max)
+{
+    this->Robot_Status.Shooter_Barrel_Heat_Limit = __Booster_42mm_Heat_Max;
+}
+
+
+void Class_Referee::Set_Booster_42mm_Heat(uint16_t __Booster_42mm_Heat)
+{
+    this->Robot_Power_Heat.Booster_42mm_Heat = __Booster_42mm_Heat;
+}
+#endif
+
+
+
 
 #ifdef GIMBAL
 /**
@@ -476,7 +549,17 @@ void Class_Chariot::Clear_DR16_Offline_Cnt()
     DR16_Offline_Cnt = 0;
 }
 
-#endif
 
+#endif
+#ifdef CHASSIS
+   void Class_Chariot::Set_Gimbal_Pitch_Angle(float __Angle)
+    {
+        Pitch_IMU_Angle = __Angle;
+    }
+   void Class_Chariot::Set_Gimbal_Yaw_Angle(float __Angle)
+    {
+        Yaw_IMU_Angle = __Angle;
+    }
+#endif
 
 /************************ COPYRIGHT(C) USTC-ROBOWALKER **************************/

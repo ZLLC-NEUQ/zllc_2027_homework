@@ -18,11 +18,24 @@
 #include "dvc_minipc.h"
 #include "dvc_imu.h"
 #include "dvc_lkmotor.h"
+#include "alg_fsm.h"
+#include "dvc_dmmotor.h"
+#include "dvc_dmimu.h"
+#include "kalman_filter.h"
 
 /* Exported macros -----------------------------------------------------------*/
 
 /* Exported types ------------------------------------------------------------*/
 
+/**
+ * @brief 吊射模式使能状态
+ *
+ */
+enum Enum_Gimbal_Launch_Mode :uint8_t
+{
+    Launch_Disable = 0, // 非吊射模式
+    Launch_Enable, // 吊射模式
+};
 
 /**
  * @brief 云台控制类型
@@ -34,6 +47,8 @@ enum Enum_Gimbal_Control_Type :uint8_t
     Gimbal_Control_Type_NORMAL,
     Gimbal_Control_Type_MINIPC,
 };
+
+
 
 /**
  * @brief Specialized, yaw轴电机类
@@ -84,6 +99,65 @@ float Class_Gimbal_Yaw_Motor_GM6020::Get_True_Gyro_Yaw()
 float Class_Gimbal_Yaw_Motor_GM6020::Get_True_Angle_Yaw()
 {
     return (True_Angle_Yaw);
+}
+
+class Class_Gimbal_Yaw_Motor_DM4310 : public Class_DM_Motor_J4310
+{
+public:
+    //陀螺仪获取云台角速度
+    Class_IMU *IMU;
+    // 加速度计KF
+    KalmanFilter Kf_Gyro_Yaw;
+
+    inline float Get_True_Rad_Yaw();
+    inline float Get_True_Gyro_Yaw();
+    inline float Get_True_Angle_Yaw();
+    inline float Get_True_Angle_Yaw_From_Encoder();
+
+    void Transform_Angle();
+    void Transform_EmcoderAngle_To_TrueAngle(); // 0-360°转为-180°至180°
+    void Disable();
+    void TIM_PID_PeriodElapsedCallback();
+
+protected:
+    //初始化相关常量
+
+    //常量
+
+    //内部变量
+    //IMU获取的欧拉角
+    float True_Rad_Yaw = 0.0f;
+    float True_Angle_Yaw = 0.0f;
+    float True_Gyro_Yaw = 0.0f;
+
+    //编码器获取的相对角度值
+    float EmcoderAngle_To_TrueAngle = 0.0f;
+    //读变量
+
+    //写变量
+
+    //读写变量
+
+    //内部函数    
+};
+float Class_Gimbal_Yaw_Motor_DM4310::Get_True_Rad_Yaw()
+{
+    return (True_Rad_Yaw);
+} 
+
+float Class_Gimbal_Yaw_Motor_DM4310::Get_True_Gyro_Yaw()
+{
+    return (True_Gyro_Yaw);
+}
+
+float Class_Gimbal_Yaw_Motor_DM4310::Get_True_Angle_Yaw()
+{
+    return (True_Angle_Yaw);
+}
+
+float Class_Gimbal_Yaw_Motor_DM4310::Get_True_Angle_Yaw_From_Encoder()
+{
+    return (EmcoderAngle_To_TrueAngle);
 }
 
 /**
@@ -197,6 +271,68 @@ float Class_Gimbal_Pitch_Motor_LK6010::Get_True_Gyro_Pitch()
 
 }
 
+class Class_Gimbal_Pitch_Motor_DM4310 : public Class_DM_Motor_J4310
+{
+public:
+    //陀螺仪获取云台角速度
+    Class_IMU *IMU;
+    // Class_DM_IMU *IMU;
+    KalmanFilter Kf_Gyro_Pitch;
+
+    inline float Get_True_Rad_Pitch();
+    inline float Get_True_Gyro_Pitch();
+    inline float Get_True_Angle_Pitch();
+    inline float Get_True_Angle_Pitch_From_Encoder();
+
+    void Transform_Angle();
+    void Transform_EmcoderAngle_To_TrueAngle(); 
+    void Disable();
+    void TIM_PID_PeriodElapsedCallback();
+protected:
+    //初始化相关变量
+
+    //常量
+
+    // 重力补偿
+    float Gravity_Compensate = 0.0f;
+
+    //内部变量 
+    float True_Rad_Pitch = 0.0f;
+    float True_Angle_Pitch = 0.0f;
+    float True_Gyro_Pitch = 0.0f;
+
+    //编码器获取的相对角度值
+    float EmcoderAngle_To_TrueAngle = 0.0f;
+    //读变量
+
+    //写变量
+
+    //读写变量
+
+    //内部函数
+};
+float Class_Gimbal_Pitch_Motor_DM4310::Get_True_Rad_Pitch()
+{
+    return (True_Rad_Pitch);
+}
+
+float Class_Gimbal_Pitch_Motor_DM4310::Get_True_Angle_Pitch()
+{
+    return (True_Angle_Pitch);
+}
+
+float Class_Gimbal_Pitch_Motor_DM4310::Get_True_Gyro_Pitch()
+{
+    return (True_Gyro_Pitch);
+
+}
+
+float Class_Gimbal_Pitch_Motor_DM4310::Get_True_Angle_Pitch_From_Encoder()
+{
+    return (EmcoderAngle_To_TrueAngle);
+}
+
+
 /**
  * @brief Specialized, 云台类
  *
@@ -221,11 +357,20 @@ public:
     // pithc轴电机
     Class_Gimbal_Pitch_Motor_LK6010 Motor_Pitch_LK6010;
 
+    // yaw轴电机
+    Class_Gimbal_Yaw_Motor_DM4310 Motor_Yaw_DM4310;
+    // pitch轴电机
+    Class_Gimbal_Pitch_Motor_DM4310 Motor_Pitch_DM4310;
+
     void Init();
+
+    inline void Set_Gimbal_Launch_Mode(Enum_Gimbal_Launch_Mode __Gimbal_Launch_Mode);
 
     inline float Get_Target_Yaw_Angle();
     inline float Get_Target_Pitch_Angle();
     inline Enum_Gimbal_Control_Type Get_Gimbal_Control_Type();
+
+    inline Enum_Gimbal_Launch_Mode Get_Gimbal_Launch_Mode();
 
     inline void Set_Gimbal_Control_Type(Enum_Gimbal_Control_Type __Gimbal_Control_Type);
     inline void Set_Target_Yaw_Angle(float __Target_Yaw_Angle);
@@ -259,7 +404,8 @@ protected:
 
     //云台状态
     Enum_Gimbal_Control_Type Gimbal_Control_Type = Gimbal_Control_Type_DISABLE ;
-
+    //吊射部署模式
+    Enum_Gimbal_Launch_Mode Gimbal_Launch_Mode = Launch_Disable;
     //读写变量
 
     // yaw轴角度
@@ -276,6 +422,15 @@ protected:
 
 /* Exported function declarations --------------------------------------------*/
 
+/**
+ * @brief 获取吊射部署模式
+ * 
+ * @return Enum_Gimbal_Launch_Mode 
+ */
+Enum_Gimbal_Launch_Mode Class_Gimbal::Get_Gimbal_Launch_Mode()
+{
+    return (Gimbal_Launch_Mode);
+}
 
 
 /**
@@ -336,6 +491,15 @@ void Class_Gimbal::Set_Target_Pitch_Angle(float __Target_Pitch_Angle)
     Target_Pitch_Angle = __Target_Pitch_Angle;
 }
 
+/**
+ * @brief 设定吊射部署模式
+ * 
+ * @param __Gimbal_Launch_Mode 
+ */
+void Class_Gimbal::Set_Gimbal_Launch_Mode(Enum_Gimbal_Launch_Mode __Gimbal_Launch_Mode)
+{
+    Gimbal_Launch_Mode = __Gimbal_Launch_Mode;
+}
 
 #endif
 

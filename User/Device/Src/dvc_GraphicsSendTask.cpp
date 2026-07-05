@@ -747,7 +747,7 @@ void ChassisLine_Change(float theta, uint8_t Init_Cnt)
 		theta += 360.f;
 	}
 
-	theta = theta - Reference_Angle;
+	//theta = theta - Reference_Angle;M61有自己的这个
 
 	theta = (int16_t)theta % 360;
 	if (theta > 180.f)

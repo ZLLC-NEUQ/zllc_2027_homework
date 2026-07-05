@@ -406,6 +406,7 @@ public:
     inline float Get_Now_Angle();
     inline float Get_Now_Radian();
     inline float Get_Now_Omega_Angle();
+    inline int16_t Get_Now_Omega_Rpm();
     inline float Get_Now_Omega_Radian();
     inline float Get_Now_Torque();
     inline uint8_t Get_Now_Temperature();
@@ -1103,6 +1104,17 @@ float Class_DJI_Motor_C620::Get_Now_Omega_Radian()
 {
     return (Data.Now_Omega_Radian);
 }
+
+/**
+ * @brief 获取当前的速度, rpm
+ *
+ * @return int16_t 当前的速度, rpm
+ */
+int16_t Class_DJI_Motor_C620::Get_Now_Omega_Rpm()
+{
+    return (Data.Now_Omega_Rpm);
+}
+
 
 /**
  * @brief 获取当前的速度, °/s

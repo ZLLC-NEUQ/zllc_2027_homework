@@ -9,34 +9,6 @@
  *
  */
 
-/* Includes ------------------------------------------------------------------*/
-
-#include "crt_booster.h"
-
-/* Private macros ------------------------------------------------------------*/
-
-/* Private types -------------------------------------------------------------*/
-
-/* Private variables ---------------------------------------------------------*/
-
-/* Private function declarations ---------------------------------------------*/
-
-/* Function prototypes -------------------------------------------------------*/
-
-/**
- * @brief 定时器处理函数
- * 这是一个模板, 使用时请根据不同处理情况在不同文件内重新定义
- *
- *//**
- * @file crt_booster.cpp
- * @author cjw
- * @brief 发射机构
- * @version 0.1
- * @date 2025-07-1 0.1 26赛季定稿
- *
- * @copyright ZLLC 2026
- *
- */
 
 /* Includes ------------------------------------------------------------------*/
 
@@ -810,7 +782,7 @@ void Class_Booster::TIM_Calculate_PeriodElapsedCallback()
 #ifdef Double_Friction
     for (auto i = 0; i < 4; i++)
     {
-        Fric[i].TIM_PID_PeriodElapsedCallback();
+        Fric[i].TIM_PID_PeriodElapsedCallback(); 
     }
 #endif
     if (Referee->Referee_Status == Referee_Status_ENABLE)

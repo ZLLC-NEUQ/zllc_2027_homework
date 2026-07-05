@@ -48,8 +48,9 @@ enum Enum_Chassis_Control_Type : uint8_t
 {
     Chassis_Control_Type_DISABLE = 0,
     Chassis_Control_Type_FLLOW,
-    Chassis_Control_Type_SPIN,
-    Chassis_Control_Type_ANTI_SPIN,
+    Chassis_Control_Type_SPIN_Positive,
+    Chassis_Control_Type_SPIN_Negative,
+	Chassis_Control_Type_SPIN,
 };
 
 /**
@@ -169,6 +170,192 @@ protected:
     // 内部函数
     void Speed_Resolution();
 };
+
+
+/**
+ * @brief Specialized,前履带后轮腿底盘
+ * 
+ */
+class Class_HybridTrackLeg_Chassis
+{
+public:
+    //debug测试用
+    uint8_t Chassis_Flag = 0;
+    //过温检测状态机
+    //Class_FSM_OverHeated_Detect FSM_OverHeated_Detect;// 针对关节电机的过温检测状态机
+    friend class Class_FSM_OverHeated_Detect;
+    //斜坡函数加减速速度X
+    Class_Slope Slope_Velocity_X;
+    //斜坡函数加减速速度Y
+    Class_Slope Slope_Velocity_Y;
+    //斜坡函数加减速角速度
+    Class_Slope Slope_Omega;
+
+    //IMU
+    //Class_IMU BoardDM_BMI;
+
+    Class_Supercap Supercap;
+      
+    //功率限制
+    //Class_New_Power_Limit Power_Limit;
+    Struct_Power_Management Power_Management;
+    
+    //裁判系统
+    Class_Referee *Referee;
+
+    //轮向电机
+    Class_DJI_Motor_C620 Motor_Wheel[4];
+
+    //关节电机
+   // Class_DM_Motor_J4310 Motor_Joint[2];
+   // Class_DM_Motor_8009P Motor_Leg[2];
+    //斜坡函数加减速角度
+    Class_Slope Slope_Position;
+
+    //履带驱动电机
+    Class_DJI_Motor_C620 Motor_Track[2];
+
+    //底部导轮电机
+    Class_DJI_Motor_C620 Motor_Guider[2];
+
+    //随动环
+    Class_PID Chassis_Follow_PID_Angle;
+
+    void Init(float __Velocity_X_Max = 4.0f, float __Velocity_Y_Max = 4.0f, float __Omega_Max = 8.0f);
+
+    inline Enum_Chassis_Control_Type Get_Chassis_Control_Type();
+    //inline Enum_Pose_Control_Type Get_Pose_Control_Type();
+    //inline Enum_Track_Control_Type Get_Track_Control_Type();
+    inline float Get_Velocity_X_Max();
+    inline float Get_Velocity_Y_Max();
+    inline float Get_Omega_Max();
+    inline float Get_Now_Power();
+    inline float Get_Now_Wheel_Power();
+    inline float Get_Now_Joint_Power();
+    inline float Get_Now_Joint_Heat();
+    inline float Get_Target_Wheel_Power();
+    inline float Get_Target_Joint_Power();
+    inline float Get_Target_Velocity_X();
+    inline float Get_Target_Velocity_Y();
+    inline float Get_Target_Omega();
+    inline float Get_Spin_Omega();
+
+    inline void Set_Chassis_Control_Type(Enum_Chassis_Control_Type __Chassis_Control_Type);
+    //inline void Set_Pose_Control_Type(Enum_Pose_Control_Type __Pose_Control_Type);
+    //inline void Set_Track_Control_Type(Enum_Track_Control_Type __Track_Control_Type);
+    inline void Set_Target_Velocity_X(float __Target_Velocity_X);
+    inline void Set_Target_Velocity_Y(float __Target_Velocity_Y);
+    inline void Set_Target_Omega(float __Target_Omega);
+    inline void Set_Now_Velocity_X(float __Now_Velocity_X);
+    inline void Set_Now_Velocity_Y(float __Now_Velocity_Y);
+    inline void Set_Now_Omega(float __Now_Omega);
+
+    inline void Set_Velocity_Y_Max(float __Velocity_Y_Max);
+    inline void Set_Velocity_X_Max(float __Velocity_X_Max);
+
+
+    void TIM_Calculate_PeriodElapsedCallback(Enum_Sprint_Status __Sprint_Status);
+    //void Update_LegPositionAccumulator(float pitch);
+    //float Plan_LegVelocity(float raw_velocity);
+    //void Calc_LegFeedforwardTorque(float velocity_target, float error_pitch);
+    //void Send_LegMITCommands(float velocity_target, float kp_stance, float kd_stance);
+
+protected:
+    //初始化相关常量
+
+    //速度X限制
+    float Velocity_X_Max;
+    //速度Y限制
+    float Velocity_Y_Max;
+    //角速度限制
+    float Omega_Max;
+    //底盘小陀螺模式角速度
+    float Spin_Omega = 8.0f;
+    //常量
+
+    //履带的角速度
+    float Target_Track_Omega = 10.0f;
+    //导轮的角速度
+    float Target_Guider_Omega = 10.0f;
+    //电机理论上最大输出
+    float Wheel_Max_Output = 16384.0f;
+
+    //内部变量
+
+    //AE的长度
+    float Leg_AE = 0.0f; 
+
+    // 机械误差导致的α偏移量，单位为弧度，正值表示实际α比理论α大
+    float alpha_offset = 0.0f; 
+
+    // 参考角度，单位为弧度
+    float Referance_Angle = 0.0f; 
+
+    float accumulated_angle_ = 0.0f;    // 累加位置偏置
+    float last_pitch_ = 0.0f;           // 上一周期俯仰角
+    float last_velocity_target_ = 0.0f; // 上一周期速度指令
+    float target_tff_ = 0.0f;      // 目标前馈力矩
+    float tff_hold_ = 0.0f;        // 经斜坡后的实际输出力矩
+
+    //读变量
+
+    //车体倾斜角度
+    float Chassis_Pitch = 0.0f;
+    float Last_Chassis_Pitch = 0.0f;
+    //距离车体水平的差值角度
+    float Error_Pitch = 0.0f;
+    //累加的车体倾斜角度
+    float Accumulated_Angle = 0.0f;
+    //姿态环角度差值
+    float Error_Angle = 0.0f;
+
+
+
+    //当前关节电机温度
+    float Joint_Heat = 0.0f;
+
+    //当前总功率
+    float Now_Power = 0.0f;
+    //当前轮向电机功率
+    float Now_Wheel_Power = 0.0f;
+    //可使用的轮向电机功率
+    float Target_Wheel_Power = 0.0f;
+
+    //写变量
+
+    //读写变量
+
+
+    //底盘控制方法
+    Enum_Chassis_Control_Type Chassis_Control_Type = Chassis_Control_Type_FLLOW;
+    //Enum_Pose_Control_Type Pose_Control_Type = Pose_DISABLE;
+    //Enum_Track_Control_Type Track_Control_Type = Track_Off;
+    //目标速度X
+    float Target_Velocity_X = 0.0f;
+    //目标速度Y
+    float Target_Velocity_Y = 0.0f;
+    //目标角速度
+    float Target_Omega = 0.0f;
+    //当前速度X
+    float Now_Velocity_X = 0.0f;
+    //当前速度Y
+    float Now_Velocity_Y = 0.0f;
+    //当前角速度
+    float Now_Omega = 0.0f;
+    //缩伸腿角度
+    float Set_Leg_Angle[3] = {0.0f, -0.67f, -0.32f};
+    //缩伸腿速度
+    float Set_Leg_Velocity[2] = {2.5f, -0.6f};
+
+    //内部函数
+    //void Transform_Angle_To_Relative();
+    void Speed_Resolution();
+    //void Switch_Pose();
+    //void Jointleg_Controller();
+    //void Track_Controller();
+    //void Guider_Controller();
+};
+
 
 /* Exported variables --------------------------------------------------------*/
 
@@ -444,6 +631,214 @@ void Class_Tricycle_Chassis::Set_Velocity_X_Max(float __Velocity_X_Max)
 {
     Velocity_X_Max = __Velocity_X_Max;
 }
+
+//M61底盘
+
+/**
+ * @brief 获取底盘控制方法
+ *
+ * @return Enum_Chassis_Control_Type 底盘控制方法
+ */
+Enum_Chassis_Control_Type Class_HybridTrackLeg_Chassis::Get_Chassis_Control_Type()
+{
+    return (Chassis_Control_Type);
+}
+
+
+/**
+ * @brief 获取速度X限制
+ *
+ * @return float 速度X限制
+ */
+float Class_HybridTrackLeg_Chassis::Get_Velocity_X_Max()
+{
+    return (Velocity_X_Max);
+}
+
+/**
+ * @brief 获取速度Y限制
+ *
+ * @return float 速度Y限制
+ */
+float Class_HybridTrackLeg_Chassis::Get_Velocity_Y_Max()
+{
+    return (Velocity_Y_Max);
+}
+
+/**
+ * @brief 获取角速度限制
+ *
+ * @return float 角速度限制
+ */
+float Class_HybridTrackLeg_Chassis::Get_Omega_Max()
+{
+    return (Omega_Max);
+}
+
+/**
+ * @brief 获取目标速度X
+ *
+ * @return float 目标速度X
+ */
+float Class_HybridTrackLeg_Chassis::Get_Target_Velocity_X()
+{
+    return (Target_Velocity_X);
+}
+
+/**
+ * @brief 获取目标速度Y
+ *
+ * @return float 目标速度Y
+ */
+float Class_HybridTrackLeg_Chassis::Get_Target_Velocity_Y()
+{
+    return (Target_Velocity_Y);
+}
+
+/**
+ * @brief 获取目标角速度
+ *
+ * @return float 目标角速度
+ */
+float Class_HybridTrackLeg_Chassis::Get_Target_Omega()
+{
+    return (Target_Omega);
+}
+
+/**
+ * @brief 获取小陀螺角速度
+ *
+ * @return float 小陀螺角速度
+ */
+float Class_HybridTrackLeg_Chassis::Get_Spin_Omega()
+{
+    return (Spin_Omega);
+}
+
+/**
+ * @brief 获取当前电机功率
+ *
+ * @return float 当前电机功率
+ */
+float Class_HybridTrackLeg_Chassis::Get_Now_Power()
+{
+    return (Now_Power);
+}
+
+/**
+ * @brief 获取当前轮向电机功率
+ *
+ * @return float 当前轮向电机功率
+ */
+float Class_HybridTrackLeg_Chassis::Get_Now_Wheel_Power()
+{
+    return (Now_Wheel_Power);
+}
+
+/**
+ * @brief 获取可使用的轮向电机功率
+ *
+ * @return float 可使用的轮向电机功率
+ */
+float Class_HybridTrackLeg_Chassis::Get_Target_Wheel_Power()
+{
+    return (Target_Wheel_Power);
+}
+
+/**
+ * @brief 设定底盘控制方法
+ *
+ * @param __Chassis_Control_Type 底盘控制方法
+ */
+void Class_HybridTrackLeg_Chassis::Set_Chassis_Control_Type(Enum_Chassis_Control_Type __Chassis_Control_Type)
+{
+    Chassis_Control_Type = __Chassis_Control_Type;
+}
+/**
+ * @brief 设定目标速度X
+ *
+ * @param __Target_Velocity_X 目标速度X
+ */
+void Class_HybridTrackLeg_Chassis::Set_Target_Velocity_X(float __Target_Velocity_X)
+{
+    Target_Velocity_X = __Target_Velocity_X;
+}
+
+/**
+ * @brief 设定目标速度Y
+ *
+ * @param __Target_Velocity_Y 目标速度Y
+ */
+void Class_HybridTrackLeg_Chassis::Set_Target_Velocity_Y(float __Target_Velocity_Y)
+{
+    Target_Velocity_Y = __Target_Velocity_Y;
+}
+
+/**
+ * @brief 设定目标角速度
+ *
+ * @param __Target_Omega 目标角速度
+ */
+void Class_HybridTrackLeg_Chassis::Set_Target_Omega(float __Target_Omega)
+{
+    Target_Omega = __Target_Omega;
+}
+
+/**
+ * @brief 设定当前速度X
+ *
+ * @param __Now_Velocity_X 当前速度X
+ */
+void Class_HybridTrackLeg_Chassis::Set_Now_Velocity_X(float __Now_Velocity_X)
+{
+    Now_Velocity_X = __Now_Velocity_X;
+}
+
+/**
+ * @brief 设定当前速度Y
+ *
+ * @param __Now_Velocity_Y 当前速度Y
+ */
+void Class_HybridTrackLeg_Chassis::Set_Now_Velocity_Y(float __Now_Velocity_Y)
+{
+    Now_Velocity_Y = __Now_Velocity_Y;
+}
+
+/**
+ * @brief 设定当前角速度
+ *
+ * @param __Now_Omega 当前角速度
+ */
+void Class_HybridTrackLeg_Chassis::Set_Now_Omega(float __Velocity_Y_Max)
+{
+    Now_Omega = __Velocity_Y_Max;
+}
+
+/**
+ * @brief 设定当前最大Y速度
+ *
+ * @param __Velocity_Y_Max 输入
+ */
+void Class_HybridTrackLeg_Chassis::Set_Velocity_Y_Max(float __Velocity_Y_Max)
+{
+    Velocity_Y_Max = __Velocity_Y_Max;
+}
+
+/**
+ * @brief 设定当前最大X速度
+ *
+ * @param __Velocity_X_Max 输入
+ */
+void Class_HybridTrackLeg_Chassis::Set_Velocity_X_Max(float __Velocity_X_Max)
+{
+    Velocity_X_Max = __Velocity_X_Max;
+}
+
+float Class_HybridTrackLeg_Chassis::Get_Now_Joint_Heat()
+{
+    return (Joint_Heat);
+}
+
 
 #endif
 
