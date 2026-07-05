@@ -1305,12 +1305,14 @@ void Class_Chariot::TIM1msMod50_Alive_PeriodElapsedCallback()
 
         Gimbal.Motor_Pitch.TIM_Alive_PeriodElapsedCallback();
         Gimbal.Motor_Yaw.TIM_Alive_PeriodElapsedCallback();
-        Gimbal.Motor_Pitch_LK6010.TIM_Alive_PeriodElapsedCallback();
+        Gimbal.Motor_Pitch.TIM_Alive_PeriodElapsedCallback();
+        Gimbal.Motor_Pitch_2.TIM_Alive_PeriodElapsedCallback();
         Gimbal.Boardc_BMI.TIM1msMod50_Alive_PeriodElapsedCallback();
 
         Booster.Motor_Driver.TIM_Alive_PeriodElapsedCallback();
         Booster.Motor_Friction_Left.TIM_Alive_PeriodElapsedCallback();
         Booster.Motor_Friction_Right.TIM_Alive_PeriodElapsedCallback();
+        Booster.Motor_Friction_Down.TIM_Alive_PeriodElapsedCallback();
 
         MiniPC.TIM1msMod50_Alive_PeriodElapsedCallback();
 

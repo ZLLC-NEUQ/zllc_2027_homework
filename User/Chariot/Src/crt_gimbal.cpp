@@ -366,6 +366,21 @@ void Class_Gimbal_Pitch_Motor_LK6010::TIM_PID_PeriodElapsedCallback()
         Set_Out(Out);
     }
     break;
+    case (LK_Motor_Control_Method_ANGLE_LOCK):
+    {
+        PID_Angle.Set_Target(YAW_Reference_Angle + 20.4f);
+        PID_Angle.Set_Now(YAW_Chassis_Angle);
+        PID_Angle.TIM_Adjust_PeriodElapsedCallback();
+        Target_Omega_Angle = PID_Angle.Get_Out();
+        // 速度环
+        PID_Omega.Set_Target(Target_Omega_Angle);
+        PID_Omega.Set_Now(Data.Now_Omega_Radian);
+        PID_Omega.TIM_Adjust_PeriodElapsedCallback();
+
+        Out = PID_Omega.Get_Out();
+        Set_Out(Out);
+    }
+    break;
     default:
     {
         Set_Out(0.0f);

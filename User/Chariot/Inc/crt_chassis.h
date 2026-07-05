@@ -24,6 +24,7 @@
 #include "dvc_referee.h"
 #include "dvc_djimotor.h"
 #include "dvc_dmmotor.h"
+#include "dvc_lkmotor.h"
 #include "alg_new_power_limit.h"
 #include "dvc_supercap.h"
 #include "config.h"
@@ -34,7 +35,7 @@
 #define wheel_diameter 0.12f   // 驱动轮直径，m
 #define half_length 0.178f           // 轮距的一半，m
 
-#define WHEEL_RADIUS (wheel_diameter / 2)   // 驱动轮半径，m
+
 #define R_DIST (half_length * 1.414f) // 旋转中心与四个舵轮的距离
 
 
@@ -70,6 +71,7 @@ enum Enum_Chassis_Control_Type : uint8_t
     Chassis_Control_Type_FLLOW,
     Chassis_Control_Type_SPIN,
     Chassis_Control_Type_ANTI_SPIN,
+    Chassis_Control_Type_Drive,
 };
 
 /**
@@ -80,6 +82,9 @@ enum Enum_Chassis_Control_Type : uint8_t
 class Class_Tricycle_Chassis
 {
 public:
+    
+    Class_IMU *IMU;
+    Class_LK_Motor *Motor_Yaw;
     // 斜坡函数加减速速度X
     Class_Slope Slope_Velocity_X;
     // 斜坡函数加减速速度Y
@@ -155,6 +160,16 @@ protected:
 
     // 内部变量
 
+    //内部变量
+    float Relative_Angle = 0.0f;
+
+    //舵向电机目标值
+    float Target_Steer_Angle[4];
+    //驱动电机目标值
+    float Target_Wheel_Omega[4];
+    //驱动电机扭矩
+    float Target_Wheel_Torque[4];
+
     // 读变量
 
     // 当前总功率
@@ -189,6 +204,37 @@ protected:
 
     // 内部函数
     void Speed_Resolution();
+    void Stree_Angle_Resolution();
+    void Force_Speed_Resolution();
+
+    Class_PID PID_Omega;
+    Class_PID PID_Velocity_X;
+    Class_PID PID_Velocity_Y;
+
+     float Dynamic_Resistance_Wheel_Current[4] = {0.0f,
+                                                 0.0f,
+                                                 0.0f,
+                                                 0.0f};
+
+    float Wheel_Resistance_Omega_Threshold = 1.0f;
+    float Wheel_Speed_Limit_Factor = 0.0f;
+
+    float Slip_Detection_Threshold = 1.5f;      
+    float Slip_Damping_Factor = 0.8f;           
+    float Slip_Factor_Decay = 0.98f;            
+    float Slip_Factor_Max = 50.0f;              
+    float Slip_Factor_Min = 0.0f;               
+    float Slip_Factor[4] = {0.0f, 0.0f, 0.0f, 0.0f}; 
+    float Chassis_Slip_Threshold = 0.5f;        
+    float Chassis_Slip_Damping = 0.5f;          
+    uint8_t Slip_Flag[4] = {0, 0, 0, 0};        
+    uint32_t Slip_Time[4] = {0, 0, 0, 0};      
+    const uint32_t Slip_Confirm_Time = 50;      
+
+    const float Wheel_Azimuth[4] = {3.0f * PI / 4.0f,
+                                    - 3.0f * PI / 4.0f,
+                                    - PI / 4.0f,
+                                    PI / 4.0f};
 
     KalmanFilter_t Chassis_Speed_Kalman;
 };
