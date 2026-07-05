@@ -433,7 +433,7 @@ void Class_Chariot::Control_Chassis()
     // 云台坐标系速度目标值 float
     float chassis_velocity_x = 0, chassis_velocity_y = 0;
     // 目标角速度
-    static float chassis_omega = 0;//float chassis_omega = 0;
+    static float chassis_omega = 0;//float chassis_omega = 0;//实际上我感觉这个没有用，gimbal也没有把这个数据打包发送给chassis，传的主要就是Vx，Vy，type
     // 底盘控制类型
     Enum_Chassis_Control_Type chassis_control_type;
     Enum_Chassis_Control_Type Pre_chassis_control_type;
@@ -1369,58 +1369,58 @@ void Class_Chariot::CAN_Chassis_Tx_Gimbal_Callback_1()
 void Class_Chariot::TIM_Calculate_PeriodElapsedCallback()
 {
 #ifdef CHASSIS
-    // 计算云台与底盘的夹角（弧度制）
-    float chassis_gimbal_diff = (Reference_Angle - Chassis_Angle);
-    if (chassis_gimbal_diff <= 0)
-    {
-        chassis_gimbal_diff += 2 * PI;
-    }
+    // // 计算云台与底盘的夹角（弧度制）
+    // float chassis_gimbal_diff = (Reference_Angle - Chassis_Angle);
+    // if (chassis_gimbal_diff <= 0)
+    // {
+    //     chassis_gimbal_diff += 2 * PI;
+    // }
 
-    // 将夹角信息存入JudgeReceiveData
-    JudgeReceiveData.Chassis_Gimbal_Diff = chassis_gimbal_diff;
+    // // 将夹角信息存入JudgeReceiveData
+    // JudgeReceiveData.Chassis_Gimbal_Diff = chassis_gimbal_diff;
 
-    // 小陀螺 随动计算角速度
-    if (Chassis.Get_Chassis_Control_Type() == Chassis_Control_Type_SPIN)
-    {
-        Chassis.Set_Target_Omega(Chassis.Get_Spin_Omega());
-    }
-    else if (Chassis.Get_Chassis_Control_Type() == Chassis_Control_Type_FLLOW)
-    {
-        // 随动yaw角度优化
-        float temp_yaw, temp_reference;
-        temp_yaw = Chassis_Angle;
-        temp_reference = Reference_Angle;
+    // // 小陀螺 随动计算角速度
+    // if (Chassis.Get_Chassis_Control_Type() == Chassis_Control_Type_SPIN)
+    // {
+    //     Chassis.Set_Target_Omega(Chassis.Get_Spin_Omega());
+    // }
+    // else if (Chassis.Get_Chassis_Control_Type() == Chassis_Control_Type_FLLOW)
+    // {
+    //     // 随动yaw角度优化
+    //     float temp_yaw, temp_reference;
+    //     temp_yaw = Chassis_Angle;
+    //     temp_reference = Reference_Angle;
 
-        // 将角度规范化到 [-π, π] 范围内
-        if (temp_yaw > PI)
-            temp_yaw = temp_yaw - 2 * PI;
-        else if (temp_yaw < -PI)
-            temp_yaw = temp_yaw + 2 * PI;
+    //     // 将角度规范化到 [-π, π] 范围内
+    //     if (temp_yaw > PI)
+    //         temp_yaw = temp_yaw - 2 * PI;
+    //     else if (temp_yaw < -PI)
+    //         temp_yaw = temp_yaw + 2 * PI;
 
-        if (temp_reference > PI)
-            temp_reference = temp_reference - 2 * PI;
-        else if (temp_reference < -PI)
-            temp_reference = temp_reference + 2 * PI;
+    //     if (temp_reference > PI)
+    //         temp_reference = temp_reference - 2 * PI;
+    //     else if (temp_reference < -PI)
+    //         temp_reference = temp_reference + 2 * PI;
 
-        // 计算角度差，选择最短路径（优弧）
-        float angle_diff = temp_reference - temp_yaw;
+    //     // 计算角度差，选择最短路径（优弧）
+    //     float angle_diff = temp_reference - temp_yaw;
 
-        // 优弧劣弧判断与优化
-        if (angle_diff > PI)
-        {
-            angle_diff -= 2 * PI;
-        }
-        else if (angle_diff < -PI)
-        {
-            angle_diff += 2 * PI;
-        }
+    //     // 优弧劣弧判断与优化
+    //     if (angle_diff > PI)
+    //     {
+    //         angle_diff -= 2 * PI;
+    //     }
+    //     else if (angle_diff < -PI)
+    //     {
+    //         angle_diff += 2 * PI;
+    //     }
 
-        // 使用优化后的角度差进行PID控制
-        PID_Chassis_Fllow.Set_Target(temp_yaw + angle_diff);
-        PID_Chassis_Fllow.Set_Now(temp_yaw);
-        PID_Chassis_Fllow.TIM_Adjust_PeriodElapsedCallback();
-        Chassis.Set_Target_Omega(PID_Chassis_Fllow.Get_Out());
-    }
+    //     // 使用优化后的角度差进行PID控制
+    //     PID_Chassis_Fllow.Set_Target(temp_yaw + angle_diff);
+    //     PID_Chassis_Fllow.Set_Now(temp_yaw);
+    //     PID_Chassis_Fllow.TIM_Adjust_PeriodElapsedCallback();
+    //     Chassis.Set_Target_Omega(PID_Chassis_Fllow.Get_Out());
+    // }
 
     static uint8_t mod2 = 0;
     // 各个模块的分别解算

@@ -163,6 +163,8 @@ void Class_DM_Motor_J4310::Init(FDCAN_HandleTypeDef *hcan, Enum_DM_Motor_ID __CA
     Omega_Max = __Omega_Max;
     Torque_Max = __Torque_Max;
     CAN_Tx_Data = allocate_tx_data(hcan, __CAN_ID);
+
+    //kalman_init(&Kf_Omega,0.0f);
 }
 
 /**

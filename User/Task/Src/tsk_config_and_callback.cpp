@@ -116,39 +116,25 @@ void Chassis_Device_CAN2_Callback(Struct_CAN_Rx_Buffer *CAN_RxMessage)
 	can[1]++;
     switch (CAN_RxMessage->Header.Identifier)
     {
-        case (0x77): // 留给上板通讯
-        {
-            //chariot.CAN_Chassis_Rx_Gimbal_Callback(CAN_RxMessage->Data);
-        }
-        break;
-        case (0x78):
-        {
-            //chariot.CAN_Chassis_Rx_Gimbal_Callback_1();
-        }
-        break;
-        case (0x79):
-        {
-            //chariot.CAN_Chassis_Rx_Gimbal_Callback_2();
-        }
-        break;						
-        case(0x141)://给yaw进行通信
-        { 
-            if(CAN_RxMessage->Data[1] != 0)
-            {
-                DtYAW = 1.0f/DWT_GetDeltaT(&last_cntyaw);
-                //chariot.Motor_Yaw.CAN_RxCpltCallback(CAN_RxMessage->Data);
-            }
-            if(DtYAW < 20)
-            {
-                buzzer_setTask(&buzzer, BUZZER_CALIBRATING_PRIORITY);
-                chariot.Chassis.Set_Chassis_Control_Type(Chassis_Control_Type_DISABLE);
-            }       
-        }
-        break;	 
+        //暂时先注释
+        // case(0x141)://给yaw进行通信
+        // { 
+        //     if(CAN_RxMessage->Data[1] != 0)
+        //     {
+        //         DtYAW = 1.0f/DWT_GetDeltaT(&last_cntyaw);
+        //         //chariot.Motor_Yaw.CAN_RxCpltCallback(CAN_RxMessage->Data);
+        //     }
+        //     if(DtYAW < 20)
+        //     {
+        //         buzzer_setTask(&buzzer, BUZZER_CALIBRATING_PRIORITY);
+        //         chariot.Chassis.Set_Chassis_Control_Type(Chassis_Control_Type_DISABLE);
+        //     }       
+        // }
+        // break;	 
     }
 }
 #endif
-/* CAN3留给磁编*/ 
+//云台板can3用于上板给下板通信
 #ifdef CHASSIS
 void Chassis_Device_CAN3_Callback(Struct_CAN_Rx_Buffer *CAN_RxMessage)
 {
@@ -165,11 +151,7 @@ void Chassis_Device_CAN3_Callback(Struct_CAN_Rx_Buffer *CAN_RxMessage)
             chariot.CAN_Chassis_Rx_Gimbal_Callback_1();
             break;
         }
-        //case (0x13):
-        //{
-           // chariot.Motor_Yaw_DM4310.CAN_RxCpltCallback(CAN_RxMessage->Data);
-           // break;
-        //}
+
         
     }
 }
@@ -432,7 +414,7 @@ void Task100us_TIM4_Callback()
     }
     //chariot.Boardc_BMI.TIM_Calculate_PeriodElapsedCallback();
     #elif defined(GIMBAL)
-     dt = DWT_GetDeltaT(&cnt_last);
+        dt = DWT_GetDeltaT(&cnt_last);
         // 单给IMU消息开的定时器 ims
         chariot.Gimbal.Boardc_BMI.TIM_Calculate_PeriodElapsedCallback();
         static uint8_t mod2 = 0;  

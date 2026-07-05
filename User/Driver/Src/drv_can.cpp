@@ -343,7 +343,6 @@ int test = 0;
  */
 void TIM_CAN_PeriodElapsedCallback()
 {
-    
     #ifdef CHASSIS
     
  static uint8_t mod5 = 0,mod100 = 0,mod20 = 0,mod50 = 0,mod10 = 0;
@@ -352,7 +351,7 @@ void TIM_CAN_PeriodElapsedCallback()
     {
         mod5 = 0;
         CAN_Send_Data(&hfdcan1, 0x200, CAN1_0x200_Tx_Data, 8); // 行进3508电机
-        CAN_Send_Data(&hfdcan3, 0x20, CAN3_Chassis_Tx_Gimbal_Data_1, 8);
+        CAN_Send_Data(&hfdcan3, 0x20, CAN3_Chassis_Tx_Gimbal_Data_1, 8);//
 
     }
     if(mod5 == 1) //200Hz
@@ -404,13 +403,13 @@ void TIM_CAN_PeriodElapsedCallback()
         CAN_Send_Data(&hfdcan3,0x03,CAN3_0xxf3_Tx_Data,8);// YAW
     }
 
-    if(mod2 == 2)//500Hz
-    {
-        CAN_Send_Data(&hfdcan2, 0xf1, CAN2_0xxf1_Tx_Data, 8);
-        CAN_Send_Data(&hfdcan1, 0xa0, CAN1_MiniPc_Tx_Data, 8);
-			  //CAN_Send_Data(&hfdcan2, 0xf1, CAN2_0xxf1_Tx_Data, 8);
-        mod2 = 0;
-    } 
+    // if(mod2 == 2)//500Hz
+    // {
+    //     CAN_Send_Data(&hfdcan2, 0xf1, CAN2_0xxf1_Tx_Data, 8);
+    //     CAN_Send_Data(&hfdcan1, 0xa0, CAN1_MiniPc_Tx_Data, 8);
+	// 		  //CAN_Send_Data(&hfdcan2, 0xf1, CAN2_0xxf1_Tx_Data, 8);
+    //     mod2 = 0;
+    // } 
 
     if(mod5 == 3 )
     {
@@ -419,7 +418,7 @@ void TIM_CAN_PeriodElapsedCallback()
 
     if (mod10 == 10 ) //100Hz
     {
-		CAN_Send_Data(&hfdcan3, 0x78, CAN3_Gimbal_Tx_Chassis_Data_1, 8);
+		CAN_Send_Data(&hfdcan3, 0x78, CAN3_Gimbal_Tx_Chassis_Data_1, 8); //给底盘发送控制命令
         mod10 = 0;
     }
 

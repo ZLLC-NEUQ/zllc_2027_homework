@@ -627,32 +627,30 @@ void Class_Gimbal_Pitch_Motor_LK6010::Transform_Angle()
  */
 void Class_Gimbal::Init()
 {
+
     // imu初始化
     Boardc_BMI.Init();
 
     // yaw轴电机
-    Motor_Yaw.filtered_target_angle.Init(-30, 40, Filter_Fourier_Type_LOWPASS, 20, 0, 1000, 4);
-    // 250 300
-    Motor_Yaw.PID_Angle.Init(40.0f, 0.0f, 0.3f, 10.0f, 100, 1000, 0.0f, 0.0f, 0, 0.001f, 0.0f, PID_D_First_ENABLE);
-    Motor_Yaw.PID_Omega.Init(65.0f, 1200.0f, 0.0f, 0.0f, 10000.0f, 20000.0f, 0.0f, 0.0f, 0.0f, 0.001f, 0.0f, PID_D_First_ENABLE);
-    Motor_Yaw.PID_Torque.Init(0.78f, 100.0f, 0.0f, 0.0f, Motor_Yaw.Get_Output_Max(), Motor_Yaw.Get_Output_Max());
-//    Motor_Yaw.PID_Angle.Init(0.0f, 0.0f, 0.3f, 10.0f, 100, 1000, 0.0f, 0.0f, 0, 0.001f, 0.0f, PID_D_First_ENABLE);
-//    Motor_Yaw.PID_Omega.Init(0.0f, 0.0f, 0.0f, 0.0f, 10000.0f, 20000.0f, 0.0f, 0.0f, 0.0f, 0.001f, 0.0f, PID_D_First_ENABLE);
-//    Motor_Yaw.PID_Torque.Init(0.0f, 0.0f, 0.0f, 0.0f, Motor_Yaw.Get_Output_Max(), Motor_Yaw.Get_Output_Max());
-    Motor_Yaw.IMU = &Boardc_BMI;
-    Motor_Yaw.Init(&hfdcan2, DJI_Motor_ID_0x206, DJI_Motor_Control_Method_IMU_ANGLE, 2048);
+    Motor_Yaw_DM4310.PID_Angle.Init(18.0f, 0.0f, 0.0f, 0.0f, 2000.0f, 4090.0f, 0.0f, 0.0f, 0.0f, 0.002f, 0.0f);
+    Motor_Yaw_DM4310.PID_Omega.Init(120.0f, 1.5f, 0.0f, 0.0f, 2000.0f, 4090.0f, 0.0f, 0.0f, 0.0f, 0.002f, 0.0f);
+    Motor_Yaw_DM4310.IMU = &Boardc_BMI;
+    Motor_Yaw_DM4310.Init(&hfdcan3, DM_Motor_ID_0xA3, DM_Motor_Control_Method_MIT_IMU_Angle, 0, 3.1415f, 20.94f);
+    //Motor_Yaw_DM4310.Init(&hfdcan3, DM_Motor_ID_0xA3, DM_Motor_Control_Method_MIT_IMU_Angle, 0, 3.1415f, 20.94f, 2.0f);
+    // CAN_Send_Data(&hfdcan1, DM_Motor_ID_0xA1+0xf0, DM_Motor_CAN_Message_Save_Zero, 8);
 
     // pitch轴电机
-    Motor_Pitch.PID_Angle.Init(40.0f, 0.0f, 0.18f, 0.0f, 10000000, 10000000,0.0f, 0.0f, 0, 0.001f, 0.0f, PID_D_First_ENABLE);
-    Motor_Pitch.PID_Omega.Init(60.0f, 1500.0f, 0.0f, 0, Motor_Pitch.Get_Output_Max(), Motor_Pitch.Get_Output_Max(), 0.0f, 0.0f, 0.0f, 0.001f, 0.8f);
-    Motor_Pitch.PID_Torque.Init(0.8f, 100.0f, 0.0f, 0.0f, Motor_Pitch.Get_Output_Max(), Motor_Pitch.Get_Output_Max());
-    Motor_Pitch.IMU = &Boardc_BMI;
-#ifdef DEBUG_PITCH_SPEED_LOOP
-    Motor_Pitch.Init(&hfdcan1, DJI_Motor_ID_0x205, DJI_Motor_Control_Method_IMU_OMEGA, 3413);
-#else
-    Motor_Pitch.Init(&hfdcan1, DJI_Motor_ID_0x205, DJI_Motor_Control_Method_IMU_ANGLE, 3413);
+    Motor_Pitch_DM4310.PID_Angle.Init(18.0f, 0.0f, 0.0f, 0.0f, 2000, 4090.0f);
+    Motor_Pitch_DM4310.PID_Omega.Init(120.0f, 5.0f, 1.0f, 0.0f, 2000, 4090.0f);
+    Motor_Pitch_DM4310.IMU = &Boardc_BMI;
+    Motor_Pitch_DM4310.Init(&hfdcan2, DM_Motor_ID_0xA4, DM_Motor_Control_Method_MIT_IMU_Angle, 0, 3.1415f, 20.94f);
+    //Motor_Pitch_DM4310.Init(&hfdcan2, DM_Motor_ID_0xA4, DM_Motor_Control_Method_MIT_IMU_Angle, 0, 3.1415f, 20.94f, 2.0f);
 
-#endif
+    // 相机控制电机初始化
+
+    kalman_init(&Motor_Yaw_DM4310.Kf_Gyro_Yaw, 0);
+    kalman_init(&Motor_Pitch_DM4310.Kf_Gyro_Pitch, 0);
+
 }
 
 /**
