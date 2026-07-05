@@ -584,7 +584,7 @@ void Class_Gimbal::TIM_Calculate_PeriodElapsedCallback()
     Motor_Pitch.Set_Transform_Angle(-External_IMU.Get_Angle_Pitch());
     Output();
 
-    //PID输出         (对齐工作版M67_2026的调用顺序)
+    //PID输出       
     Motor_Yaw.TIM_PID_PeriodElapsedCallback();
     Motor_Pitch.TIM_PID_PeriodElapsedCallback();
     Motor_Main_Yaw.TIM_Process_PeriodElapsedCallback();
