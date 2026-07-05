@@ -31,7 +31,11 @@
 /* Private function declarations ---------------------------------------------*/
 
 /* Function prototypes -------------------------------------------------------*/
-
+//
+//
+// chasiss是借用代码最多的【哭】
+//
+//
 //这些就直接用了吧
 float Chassis_Speed_Kalman_F[36] = {1.0f, 0.0f, 0.002f, 0.0f, 0.0f, 0.0f,
                                     0.0f, 1.0f, 0.0f, 0.002f, 0.0f, 0.0f,
@@ -104,10 +108,10 @@ void Class_Steering_Wheel_Chassis::Init(float __Velocity_X_Max, float __Velocity
     // {
     //     Motor_Wheel[i].PID_Omega.Init(2000.0f, 0.0f, 0.0f, 0.0f, Motor_Wheel[i].Get_Output_Max(), Motor_Wheel[i].Get_Output_Max());
     // }
-    Motor_Wheel[0].PID_Omega.Init(2000.0f, 0.0f, 0.0f, 0.0f, Motor_Wheel[0].Get_Output_Max(), Motor_Wheel[0].Get_Output_Max());
-    Motor_Wheel[1].PID_Omega.Init(2000.0f, 0.0f, 0.0f, 0.0f, Motor_Wheel[1].Get_Output_Max(), Motor_Wheel[1].Get_Output_Max());
-    Motor_Wheel[2].PID_Omega.Init(2000.0f, 0.0f, 0.0f, 0.0f, Motor_Wheel[2].Get_Output_Max(), Motor_Wheel[2].Get_Output_Max());
-    Motor_Wheel[3].PID_Omega.Init(2000.0f, 0.0f, 0.0f, 0.0f, Motor_Wheel[3].Get_Output_Max(), Motor_Wheel[3].Get_Output_Max());
+    Motor_Wheel[0].PID_Omega.Init(0.0f, 0.0f, 0.0f, 0.0f, Motor_Wheel[0].Get_Output_Max(), Motor_Wheel[0].Get_Output_Max());
+    Motor_Wheel[1].PID_Omega.Init(0.0f, 0.0f, 0.0f, 0.0f, Motor_Wheel[1].Get_Output_Max(), Motor_Wheel[1].Get_Output_Max());
+    Motor_Wheel[2].PID_Omega.Init(0.0f, 0.0f, 0.0f, 0.0f, Motor_Wheel[2].Get_Output_Max(), Motor_Wheel[2].Get_Output_Max());
+    Motor_Wheel[3].PID_Omega.Init(0.0f, 0.0f, 0.0f, 0.0f, Motor_Wheel[3].Get_Output_Max(), Motor_Wheel[3].Get_Output_Max());
 
     // 轮向电机ID初始化
     Motor_Wheel[0].Init(&hfdcan1, DJI_Motor_ID_0x201, DJI_Motor_Control_Method_OPENLOOP, M3508_REDUCTION_RATIO);
@@ -121,18 +125,37 @@ void Class_Steering_Wheel_Chassis::Init(float __Velocity_X_Max, float __Velocity
     Motor_Steer[2].Init(&hfdcan1, DJI_Motor_ID_0x206, DJI_Motor_Control_Method_AGV_MODE, 8.0f);
     Motor_Steer[3].Init(&hfdcan1, DJI_Motor_ID_0x208, DJI_Motor_Control_Method_AGV_MODE, 8.0f);
 
-    //舵向电机ID初始化
     for(int i=0;i<4;i++)
     {
-        Motor_Steer[i].PID_Angle.Init(35.0f, 0.0f, 0.0f, 0.0f, 15.0f, 15.0f);
-        Motor_Steer[i].PID_Omega.Init(700.0f,0.0f, 0.0f, 0.0f, 8000, Motor_Steer[0].Get_Output_Max());
+        Motor_Steer[i].PID_Angle.Init(0.0f, 0.0f, 0.0f, 0.0f, 15.0f, 15.0f);
+        Motor_Steer[i].PID_Omega.Init(0.0f,0.0f, 0.0f, 0.0f, 8000, Motor_Steer[0].Get_Output_Max());
     }
 
     //舵向电机零点位置初始化
     Motor_Steer[0].Set_Zero_Position(1.26f);
     Motor_Steer[1].Set_Zero_Position(1.49f);
     Motor_Steer[2].Set_Zero_Position(2.22f);
-    Motor_Steer[3].Set_Zero_Position(4.39f);
+    Motor_Steer[3].Set_Zero_Position(4.39f);//零点直接用了，应该不会特意拆电机再装上去吧
+    //至少初始化是自己写的
+
+    PID_Velocity_X.Init(0.0f, 0.0f, 0.0f, 0.0f, 150.0f, 500.0f, 0.002f);
+
+    // 底盘速度yPID, 输出摩擦力
+    PID_Velocity_Y.Init(0.0f, 0.0f, 0.0f, 0.0f, 150.0f, 500.0f, 0.002f);
+
+    // 底盘角速度PID, 输出扭矩
+    PID_Omega.Init(0.0f, 0.0f, 0.0f, 0.0f, 10.0f, 12.0f, 0.002f);
+
+    Kalman_Filter_Init(&Chassis_Speed_Kalman, 6, 0, 6);                               
+
+    memcpy(Chassis_Speed_Kalman.F_data, Chassis_Speed_Kalman_F, sizeof(Chassis_Speed_Kalman_F));
+    memcpy(Chassis_Speed_Kalman.H_data, Chassis_Speed_Kalman_H, sizeof(Chassis_Speed_Kalman_H));
+    memcpy(Chassis_Speed_Kalman.P_data, Chassis_Speed_Kalman_P, sizeof(Chassis_Speed_Kalman_P));
+    memcpy(Chassis_Speed_Kalman.Q_data, Chassis_Speed_Kalman_Q, sizeof(Chassis_Speed_Kalman_Q));
+    memcpy(Chassis_Speed_Kalman.R_data, Chassis_Speed_Kalman_R, sizeof(Chassis_Speed_Kalman_R));
+
+    //底盘控制方式初始化
+    Chassis_Control_Type = Chassis_Control_Type_DISABLE;
 }
 
 // /**
@@ -322,6 +345,7 @@ void Class_Steering_Wheel_Chassis::Init(float __Velocity_X_Max, float __Velocity
  * @brief 速度解算
  * 
  */
+//为什么我运动学解算看得明白，但就是不会写呢[哭][哭]
 float True_Vx[4],True_Vy[4],True_Target_Angle_Radian[4];
 float car_V,car_yaw;
 void Class_Steering_Wheel_Chassis::Speed_Resolution()
@@ -341,7 +365,7 @@ void Class_Steering_Wheel_Chassis::Speed_Resolution()
             Motor_Steer[i].Set_Out(0.0f);
         }
         return;
-    }
+    }//失能是最好写的[看]
 #ifdef AGV
     switch (Chassis_Control_Type)
     {
@@ -413,7 +437,7 @@ void Class_Steering_Wheel_Chassis::Speed_Resolution()
                     {
                         delta_Angle = delta_Angle + PI;
                     }
-                    Motor_Steer[i].Set_Target_Radian(Transform_Radian + delta_Angle);
+                    Motor_Steer[i].Set_Target_Radian(Transform_Radian + delta_Angle);//静止时把轮子控制在45°的位置，稳定性更高
                     Motor_Steer[i].Set_Transform_Radian(Transform_Radian);
                     Motor_Steer[i].TIM_PID_PeriodElapsedCallback();
                     Motor_Wheel[i].TIM_PID_PeriodElapsedCallback();
@@ -475,7 +499,6 @@ void Class_Steering_Wheel_Chassis::Speed_Resolution()
             }
 
             // 处理-180 - 180的突变问题    同时还有优劣弧处理
-            // delta_Angle = True_Target_Angle_Radian[i] - Motor_Steer[i].Get_Now_Zero_Offset_Radian();
             True_Target_Angle_Radian[i] = Normalize_Angle_Radian_PI_to_PI(True_Target_Angle_Radian[i]);
 
             Motor_Steer[i].Set_Target_Radian(True_Target_Angle_Radian[i]);
@@ -508,7 +531,7 @@ void Class_Steering_Wheel_Chassis::Set_Chassis_Kalman_Measure(float value1, floa
 float tmp_Velocity_Vx, tmp_Velocity_Vy, tmp_Omega;
 float Ins_Accel_X_b, Ins_Accel_Y_b;
 float wwx,wwy;
-float H7_Offset_X = 0.027f, H7_Offset_Y = 0.1275f, Distance_Offset = 0.0f;
+float H7_Offset_X = 0.0f, H7_Offset_Y = 0.0f, Distance_Offset = 0.0f;
 void Class_Steering_Wheel_Chassis::Chassis_Speed_Estimate()
 {
     tmp_Velocity_Vx = tmp_Velocity_Vy = tmp_Omega = 0.0f;
@@ -524,32 +547,32 @@ void Class_Steering_Wheel_Chassis::Chassis_Speed_Estimate()
     arm_sqrt_f32(H7_Offset_X * H7_Offset_X + H7_Offset_Y * H7_Offset_Y, &Distance_Offset);
 
     Ins_Accel_X_b = Ins_Accel_X_b - Distance_Offset * IMU->Get_Gyro_Yaw() * IMU->Get_Gyro_Yaw() * arm_cos_f32(offset_angle);
-    Ins_Accel_Y_b = Ins_Accel_Y_b - Distance_Offset * IMU->Get_Gyro_Yaw() * IMU->Get_Gyro_Yaw() * arm_sin_f32(offset_angle);
+    Ins_Accel_Y_b = Ins_Accel_Y_b - Distance_Offset * IMU->Get_Gyro_Yaw() * IMU->Get_Gyro_Yaw() * arm_sin_f32(offset_angle);//这啥？消除喵板斜放向心力的影响？
 
-    wwx = Ins_Accel_X_b;
-    wwy = Ins_Accel_Y_b;
-
-    float derta_angle;
+    float delta_angle;
     float Chassis_Angle;
     Chassis_Angle = Motor_Yaw->Get_Now_Radian();
-    derta_angle = (Reference_Radian - Chassis_Angle);
+    delta_angle = (Reference_Radian - Chassis_Angle);
     if (Chassis_Control_Type== Chassis_Control_Type_Drive)
     {
-        derta_angle = (derta_angle + 20.5f * PI / 180.0f);
+        delta_angle = (delta_angle + 20.5f * PI / 180.0f);//咋测出20.5的，不知道
     }
-    derta_angle = derta_angle < 0 ? (derta_angle + 2 * PI) : derta_angle;
+    delta_angle = delta_angle < 0 ? (delta_angle + 2 * PI) : delta_angle;
 
     float tmp_ax = Ins_Accel_X_b;
     float tmp_ay = Ins_Accel_Y_b;
 
-    Ins_Accel_X_b = tmp_ax * arm_cos_f32(derta_angle) - tmp_ay * arm_sin_f32(derta_angle);
-    Ins_Accel_Y_b = tmp_ax * arm_sin_f32(derta_angle) + tmp_ay * arm_cos_f32(derta_angle);
+    Ins_Accel_X_b = tmp_ax * arm_cos_f32(delta_angle) - tmp_ay * arm_sin_f32(delta_angle);
+    Ins_Accel_Y_b = tmp_ax * arm_sin_f32(delta_angle) + tmp_ay * arm_cos_f32(delta_angle);
+
+    wwx = Ins_Accel_X_b;
+    wwy = Ins_Accel_Y_b;
 
     float tmp_vx = tmp_Velocity_Vx;
     float tmp_vy = tmp_Velocity_Vy;
 
-    tmp_Velocity_Vx = tmp_vx * arm_cos_f32(derta_angle) - tmp_vy * arm_sin_f32(derta_angle);
-    tmp_Velocity_Vy = tmp_vx * arm_sin_f32(derta_angle) + tmp_vy * arm_cos_f32(derta_angle);
+    tmp_Velocity_Vx = tmp_vx * arm_cos_f32(delta_angle) - tmp_vy * arm_sin_f32(delta_angle);
+    tmp_Velocity_Vy = tmp_vx * arm_sin_f32(delta_angle) + tmp_vy * arm_cos_f32(delta_angle);
     //注意数据单位
     Set_Chassis_Kalman_Measure(tmp_Velocity_Vx, tmp_Velocity_Vy, 0.0f, 0.0f, tmp_Omega, IMU->Get_Gyro_Yaw());
     
@@ -562,7 +585,7 @@ void Class_Steering_Wheel_Chassis::Chassis_Speed_Estimate()
 
 void Class_Steering_Wheel_Chassis::Stree_Angle_Resolution()
 {
-    // 轮组自锁，每个小轮坐标系都符合右手系
+    //自锁和速度解算一样
     static uint32_t Lock_Time = 0;
     static uint8_t Lock_Flag = 0;
     float delta_Angle = 0.0f, Transform_Radian = 0.0f; // 用于优化处理的变量
@@ -626,20 +649,20 @@ void Class_Steering_Wheel_Chassis::Stree_Angle_Resolution()
     float tmp_target_angle[4];
     float True_Vx[4], True_Vy[4], True_Target_Angle_Radian[4];
 
-    float derta_angle;
+    float delta_angle;
     float Chassis_Angle;
     Chassis_Angle = Motor_Yaw->Get_Now_Radian();
-    derta_angle = -(Reference_Radian - Chassis_Angle);
+    delta_angle = -(Reference_Radian - Chassis_Angle);
     if (Chassis_Control_Type== Chassis_Control_Type_Drive)
     {
-        derta_angle = (derta_angle - 20.5f * PI / 180.0f);
+        delta_angle = (delta_angle - 20.5f * PI / 180.0f);
     }
-    derta_angle = derta_angle < 0 ? (derta_angle + 2 * PI) : derta_angle;
+    delta_angle = delta_angle < 0 ? (delta_angle + 2 * PI) : delta_angle;
 
-    float tmp_tx ,tmp_ty;
+    float tmp_tx,tmp_ty;
 
-    tmp_tx = Target_Velocity_X * arm_cos_f32(derta_angle) - Target_Velocity_Y * arm_sin_f32(derta_angle);
-    tmp_ty = Target_Velocity_X * arm_sin_f32(derta_angle) + Target_Velocity_Y * arm_cos_f32(derta_angle);
+    tmp_tx = Target_Velocity_X * arm_cos_f32(delta_angle) - Target_Velocity_Y * arm_sin_f32(delta_angle);
+    tmp_ty = Target_Velocity_X * arm_sin_f32(delta_angle) + Target_Velocity_Y * arm_cos_f32(delta_angle);
 
     if (Chassis_Control_Type == Chassis_Control_Type_Drive)
     {
@@ -670,7 +693,7 @@ void Class_Steering_Wheel_Chassis::Stree_Angle_Resolution()
 
         // 计算目标角度
         if (fabs(temp_Target_Omega) < 0.0001f)
-        { // 避免X =0 ；Y = 0的情况
+        {
             True_Target_Angle_Radian[i] = Motor_Steer[i].Get_Now_Zero_Offset_Radian();
         }
         else
@@ -747,25 +770,25 @@ void Class_Steering_Wheel_Chassis::Force_Speed_Resolution()
         force_y = PID_Velocity_Y.Get_Out();
         torque_omega = PID_Omega.Get_Out();
 
-        float derta_angle;
+        float delta_angle;
         float Chassis_Angle;
         Chassis_Angle = Motor_Yaw->Get_Now_Radian();
-        derta_angle = -(Reference_Radian - Chassis_Angle);
+        delta_angle = -(Reference_Radian - Chassis_Angle);
         if (Chassis_Control_Type == Chassis_Control_Type_Drive)
         {
-            derta_angle = (derta_angle - 20.5f * PI / 180.0f);
+            delta_angle = (delta_angle - 20.5f * PI / 180.0f);
         }
-        derta_angle = derta_angle < 0 ? (derta_angle + 2 * PI) : derta_angle;
+        delta_angle = delta_angle < 0 ? (delta_angle + 2 * PI) : delta_angle;
 
         float tmp_force_x = force_x;
         float tmp_force_y = force_y;
 
-        force_x = tmp_force_x * arm_cos_f32(derta_angle) - tmp_force_y * arm_sin_f32(derta_angle);
-        force_y = tmp_force_x * arm_sin_f32(derta_angle) + tmp_force_y * arm_cos_f32(derta_angle);
+        force_x = tmp_force_x * arm_cos_f32(delta_angle) - tmp_force_y * arm_sin_f32(delta_angle);
+        force_y = tmp_force_x * arm_sin_f32(delta_angle) + tmp_force_y * arm_cos_f32(delta_angle);
 
         Fx = force_x;
         Fy = force_y;
-        bbb = derta_angle;
+        bbb = delta_angle;
 
         // 每个轮的扭力
         float tmp_force[4];
@@ -792,7 +815,7 @@ void Class_Steering_Wheel_Chassis::Force_Speed_Resolution()
                     if (Slip_Time[i] > Slip_Confirm_Time)
                     {
                         Slip_Flag[i] = 1;
-                        Slip_Factor[i] = Slip_Factor[i] * Slip_Damping_Factor + 10.0f;
+                        Slip_Factor[i] = Slip_Factor[i] * Slip_Damping_Factor + 0.0f;//感觉可能太小了，加个东西
                         Slip_Factor[i] = (Slip_Factor[i] > Slip_Factor_Max) ? Slip_Factor_Max : Slip_Factor[i];
                     }
                 }
@@ -1006,6 +1029,8 @@ void Class_Steering_Wheel_Chassis::TIM_Calculate_PeriodElapsedCallback(Enum_Spri
     Force_Speed_Resolution();
 
     /***************************超级电容*********************************/
+
+    //超点直接用的原来的代码
 #ifdef POWER_LIMIT_JH
     static uint8_t supercap_flag = 0;                   //超电能量低于50J的标志位
     

@@ -26,6 +26,7 @@
 /* Function prototypes -------------------------------------------------------*/
 uint16_t gimbal_lock = 2;
 uint16_t run_time = 1;
+extern float wwx, wwy;
 /**
  * @brief 控制交互端初始化
  *

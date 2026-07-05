@@ -332,6 +332,7 @@ float Class_Gimbal::Get_Target_Pitch_Angle()
     return (Target_Pitch_Angle);
 }
 
+
 /**
  * @brief 获取云台控制类型
  *
@@ -368,6 +369,25 @@ void Class_Gimbal::Set_Target_Yaw_Angle(float __Target_Yaw_Angle)
 void Class_Gimbal::Set_Target_Pitch_Angle(float __Target_Pitch_Angle)
 {
     Target_Pitch_Angle = __Target_Pitch_Angle;
+}
+
+/**
+ * @brief 获取大pitch轴角度
+ *
+ * @return float 大pitch轴角度
+ */
+float Class_Gimbal::Get_Target_Pitch_Angle_2()
+{
+    return (Target_Pitch_2_Angle);
+}
+
+/**
+ * @brief 设定大pitch轴角度
+ *
+ */
+void Class_Gimbal::Set_Target_Pitch_Angle_2(float __Target_Pitch_Angle)
+{
+    Target_Pitch_2_Angle = __Target_Pitch_Angle;
 }
 
 
