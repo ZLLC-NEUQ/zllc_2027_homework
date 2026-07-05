@@ -75,7 +75,7 @@ float Chassis_Speed_Kalman_R[36] = {15.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // Vx
 void Class_Steering_Wheel_Chassis::Init(float __Velocity_X_Max, float __Velocity_Y_Max, float __Omega_Max, float __Steer_Power_Ratio)
 {
     //Power_Limit.Init(400,3500);
-    Supercap.Init(&hfdcan2,75.f);
+    Supercap.Init(&hfdcan3,75.f);
     
     Velocity_X_Max = __Velocity_X_Max;
     Velocity_Y_Max = __Velocity_Y_Max;

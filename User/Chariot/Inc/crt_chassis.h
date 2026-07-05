@@ -136,6 +136,7 @@ public:
     inline float Get_Target_Velocity_Y();
     inline float Get_Target_Omega();
     inline float Get_Spin_Omega();
+    inline void Set_Spin_Omega(float __Spin_Omega);
     inline float Get_Relative_Angle();
 
     inline void Set_Chassis_Control_Type(Enum_Chassis_Control_Type __Chassis_Control_Type);
@@ -326,6 +327,16 @@ float Class_Steering_Wheel_Chassis::Get_Target_Omega()
 float Class_Steering_Wheel_Chassis::Get_Spin_Omega()
 {
     return (Spin_Omega);
+}
+
+/**
+ * @brief 设置小陀螺角速度
+ *
+ * @param __Spin_Omega 小陀螺角速度
+ */
+void Class_Steering_Wheel_Chassis::Set_Spin_Omega(float __Spin_Omega)
+{
+    Spin_Omega = __Spin_Omega;
 }
 
 /**

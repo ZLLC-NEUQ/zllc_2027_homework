@@ -136,7 +136,7 @@ void Chassis_Device_CAN2_Callback(Struct_CAN_Rx_Buffer *CAN_RxMessage)
     {
         case (0x77): // 留给上板通讯
         {
-            chariot.CAN_Chassis_Rx_Gimbal_Callback(CAN_RxMessage->Data);
+            chariot.CAN_Chassis_Rx_Gimbal_Callback();
         }
         break;
         case (0x78):
@@ -144,11 +144,7 @@ void Chassis_Device_CAN2_Callback(Struct_CAN_Rx_Buffer *CAN_RxMessage)
             chariot.CAN_Chassis_Rx_Gimbal_Callback_1();
         }
         break;
-        case (0x79):
-        {
-            chariot.CAN_Chassis_Rx_Gimbal_Callback_2();
-        }
-        break;						
+        				
         case(0x141)://给yaw进行通信
         { 
             if(CAN_RxMessage->Data[1] != 0)
@@ -163,9 +159,7 @@ void Chassis_Device_CAN2_Callback(Struct_CAN_Rx_Buffer *CAN_RxMessage)
             }       
         }
         break;	
-         case (0x67): // 超电接收
-            chariot.Chassis.Supercap.CAN_RxCpltCallback(CAN_RxMessage->Data);
-            break;
+        
     }
 }
 #endif
@@ -175,6 +169,12 @@ void Chassis_Device_CAN3_Callback(Struct_CAN_Rx_Buffer *CAN_RxMessage)
 {
     switch (CAN_RxMessage->Header.Identifier)
     {
+        case (0x67): // 超电反馈
+        {
+            chariot.Chassis.Supercap.CAN_RxCpltCallback(CAN_RxMessage->Data);
+        }
+        break;
+        
         case (0xD1):
             chariot.Chassis.Motor_Steer[0].MA600_Data_Process(CAN_RxMessage);
             break;
@@ -206,17 +206,24 @@ void Gimbal_Device_CAN1_Callback(Struct_CAN_Rx_Buffer *CAN_RxMessage)
             chariot.Booster.Motor_Friction_Left.CAN_RxCpltCallback(CAN_RxMessage->Data);
         }
 		break;
+
 		case(0x202):
 		{
 			chariot.Booster.Motor_Friction_Right.CAN_RxCpltCallback(CAN_RxMessage->Data);
 		}
 		break;
-        case (0xa1):
+
+        case (0xA3): // 算法板yaw包
+        
+        case (0xA4): // 算法板pitch包
         {
-            chariot.MiniPC.CAN_RxCpltCallback(CAN_RxMessage->Data);
+            chariot.MiniPC.CAN_RxCpltCallback(
+                CAN_RxMessage->Header.Identifier,
+                CAN_RxMessage->Data
+            );
         }
         break;
-	}
+    }
 }
 
 /**
@@ -404,7 +411,7 @@ void Task100us_TIM4_Callback()
         //Task_Loop();
         Referee_Sand_Cnt = 0;
     }
-    chariot.Boardc_BMI.TIM_Calculate_PeriodElapsedCallback();
+    //chariot.Boardc_BMI.TIM_Calculate_PeriodElapsedCallback();
     #elif defined(GIMBAL)
     // 单给IMU消息开的定时器 ims
     Dtm = 1.0f/DWT_GetDeltaT(&last_cntm);
