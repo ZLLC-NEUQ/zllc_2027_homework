@@ -317,6 +317,52 @@ void Class_Tricycle_Chassis::Speed_Resolution()
     }
 }
 
+void Class_Tricycle_Chassis::Speed_Kalman()
+{
+    if (IMU == NULL)
+        return;
+
+    float vx = 0.0f, vy = 0.0f;
+    for (int i = 0; i < 4; i++)
+    {
+        float omega = Motor_Wheel[i].Get_Now_Omega_Radian();
+        float angle = Motor_Steer[i].Get_Now_Zero_Offset_Radian();
+        vx += omega * WHEEL_RADIUS * cosf(angle);
+        vy += omega * WHEEL_RADIUS * sinf(angle);
+    }
+    vx /= 4.0f;
+    vy /= 4.0f;
+
+    float imu_acc_x = IMU->Get_Accel_X();
+    float imu_acc_y = IMU->Get_Accel_Y();
+    float imu_gyro_z = IMU->Get_Gyro_Yaw();
+
+    Kalman_Measure[0] = vx;
+    Kalman_Measure[1] = vy;
+    Kalman_Measure[2] = imu_acc_x;
+    Kalman_Measure[3] = imu_acc_y;
+    Kalman_Measure[4] = Now_Omega;
+    Kalman_Measure[5] = imu_gyro_z;
+
+    Chassis_Speed_Kalman.MeasuredVector = Kalman_Measure;
+
+    float *filtered = Kalman_Filter_Update(&Chassis_Speed_Kalman, NULL);
+    
+    if (filtered != NULL)
+    {
+        Now_Velocity_X = filtered[0];
+        Now_Velocity_Y = filtered[1];
+        Now_Omega = filtered[4];
+
+        Kalman_State[0] = filtered[0];
+        Kalman_State[1] = filtered[1];
+        Kalman_State[2] = filtered[2];
+        Kalman_State[3] = filtered[3];
+        Kalman_State[4] = filtered[4];
+        Kalman_State[5] = filtered[5];
+    }
+}
+
 void Class_Tricycle_Chassis::Stree_Angle_Resolution()
 {
     static uint32_t Lock_Time = 0;
@@ -456,23 +502,25 @@ void Class_Tricycle_Chassis::Stree_Angle_Resolution()
 
 void Class_Tricycle_Chassis::Slip_Detection()
 {
-    for(int i = 0; i < 4; i++)
+     for(int i = 0; i < 4; i++)
     {
-        float target_omega = Motor_Wheel[i].Get_Target_Omega_Radian();
-        float current_omega = Motor_Wheel[i].Get_Now_Omega_Radian();
-
-        if (fabs(target_omega) > 0.1f)
+        float encoder_omega = Motor_Wheel[i].Get_Now_Omega_Radian();
+        float angle = Motor_Steer[i].Get_Now_Zero_Offset_Radian();
+        
+        float expected_omega = (Now_Velocity_X * cosf(angle) + Now_Velocity_Y * sinf(angle)) / WHEEL_RADIUS;
+        
+        if (fabs(expected_omega) > 0.1f)
         {
-            Slip_Ratio[i] = (target_omega - current_omega) / target_omega;
+            Slip_Ratio[i] = fabs(encoder_omega - expected_omega) / expected_omega;
         }
         else{
             Slip_Ratio[i] = 0.0f;
         }
 
-        float slip_threshold = 0.0f;
-        if (fabs(Slip_Ratio[i]) > slip_threshold)
+        float slip_threshold = 0.3f;
+        if (Slip_Ratio[i] > slip_threshold)
         {
-            float slip_factor = 1.0f - (fabs(Slip_Ratio[i]) - slip_threshold) * 0.5f;
+            float slip_factor = 1.0f - (Slip_Ratio[i] - slip_threshold) * 0.5f;
             Math_Constrain(&slip_factor, 0.1f, 1.0f);
 
             float current_out = Motor_Wheel[i].Get_Out();
@@ -481,51 +529,8 @@ void Class_Tricycle_Chassis::Slip_Detection()
     }
 }
 
-void Class_Tricycle_Chassis::Speed_Kalman()
-{
-    if (IMU == nullptr)
-        return;
 
-    float vx = 0.0f, vy = 0.0f;
-    for (int i = 0; i < 4; i++)
-    {
-        float omega = Motor_Wheel[i].Get_Now_Omega_Radian();
-        float angle = Motor_Steer[i].Get_Now_Zero_Offset_Radian();
-        vx += omega * WHEEL_RADIUS * cosf(angle);
-        vy += omega * WHEEL_RADIUS * sinf(angle);
-    }
-    vx /= 4.0f;
-    vy /= 4.0f;
 
-    float imu_acc_x = IMU->Get_Accel_X();
-    float imu_acc_y = IMU->Get_Accel_Y();
-    float imu_gyro_z = IMU->Get_Gyro_Yaw();
-
-    Kalman_Measure[0] = vx;
-    Kalman_Measure[1] = vy;
-    Kalman_Measure[2] = imu_acc_x;
-    Kalman_Measure[3] = imu_acc_y;
-    Kalman_Measure[4] = Now_Omega;
-    Kalman_Measure[5] = imu_gyro_z;
-
-    Chassis_Speed_Kalman.MeasuredVector = Kalman_Measure;
-
-    float *filtered = Kalman_Filter_Update(&Chassis_Speed_Kalman, nullptr);
-    
-    if (filtered != nullptr)
-    {
-        Now_Velocity_X = filtered[0];
-        Now_Velocity_Y = filtered[1];
-        Now_Omega = filtered[4];
-
-        Kalman_State[0] = filtered[0];
-        Kalman_State[1] = filtered[1];
-        Kalman_State[2] = filtered[2];
-        Kalman_State[3] = filtered[3];
-        Kalman_State[4] = filtered[4];
-        Kalman_State[5] = filtered[5];
-    }
-}
 //Enum_Supercap_Mode test_mode = Supercap_Mode_ENABLE;
 float test_power = 58.0f;
 float compensate_max_power = 30.0f;
