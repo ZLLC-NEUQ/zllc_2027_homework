@@ -205,36 +205,11 @@ protected:
     // 内部函数
     void Speed_Resolution();
     void Stree_Angle_Resolution();
-    void Force_Speed_Resolution();
 
     Class_PID PID_Omega;
     Class_PID PID_Velocity_X;
     Class_PID PID_Velocity_Y;
 
-     float Dynamic_Resistance_Wheel_Current[4] = {0.0f,
-                                                 0.0f,
-                                                 0.0f,
-                                                 0.0f};
-
-    float Wheel_Resistance_Omega_Threshold = 1.0f;
-    float Wheel_Speed_Limit_Factor = 0.0f;
-
-    float Slip_Detection_Threshold = 1.5f;      
-    float Slip_Damping_Factor = 0.8f;           
-    float Slip_Factor_Decay = 0.98f;            
-    float Slip_Factor_Max = 50.0f;              
-    float Slip_Factor_Min = 0.0f;               
-    float Slip_Factor[4] = {0.0f, 0.0f, 0.0f, 0.0f}; 
-    float Chassis_Slip_Threshold = 0.5f;        
-    float Chassis_Slip_Damping = 0.5f;          
-    uint8_t Slip_Flag[4] = {0, 0, 0, 0};        
-    uint32_t Slip_Time[4] = {0, 0, 0, 0};      
-    const uint32_t Slip_Confirm_Time = 50;      
-
-    const float Wheel_Azimuth[4] = {3.0f * PI / 4.0f,
-                                    - 3.0f * PI / 4.0f,
-                                    - PI / 4.0f,
-                                    PI / 4.0f};
 
     KalmanFilter_t Chassis_Speed_Kalman;
 };
