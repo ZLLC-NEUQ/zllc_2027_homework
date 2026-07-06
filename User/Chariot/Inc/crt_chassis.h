@@ -205,13 +205,20 @@ protected:
     // 内部函数
     void Speed_Resolution();
     void Stree_Angle_Resolution();
+    void Slip_Detection();
+    void Speed_Kalman();
 
     Class_PID PID_Omega;
     Class_PID PID_Velocity_X;
     Class_PID PID_Velocity_Y;
 
 
+    float Slip_Ratio[4];
     KalmanFilter_t Chassis_Speed_Kalman;
+
+    float Kalman_State[6];//当前
+    float Kalman_Predict[6];//预测
+    float Kalman_Measure[6];//向量
 };
 
 /* Exported variables --------------------------------------------------------*/

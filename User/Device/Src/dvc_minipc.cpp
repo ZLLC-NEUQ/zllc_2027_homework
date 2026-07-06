@@ -13,9 +13,7 @@
 
 #include "dvc_minipc.h"
 
-volatile uint32_t debug_can_id = 0;
-volatile uint8_t debug_rx0 = 0;
-volatile uint8_t debug_rx1 = 0;
+
 /* private macros ------------------------------------------------------------*/
 
 /* private types -------------------------------------------------------------*/
@@ -51,33 +49,22 @@ float camera_distance = 0.036;
  */
 void Class_MiniPC::Data_Process()
 {
-      const float scale = 1.0f / 10000.0f;
-    const float rad_to_deg = 180.0f / PI;
-
-    Rx_Angle_Yaw =
-        Yaw_Rx_Cache.angle * scale * rad_to_deg;
-
-    Rx_Angle_Pitch =
-        Pitch_Rx_Cache.angle * scale * rad_to_deg;
-
-    Rx_Yaw_Velocity =
-        Yaw_Rx_Cache.velocity * scale * rad_to_deg;
-
-    Rx_Pitch_Velocity =
-        Pitch_Rx_Cache.velocity * scale * rad_to_deg;
-
-    Rx_Yaw_Acceleration =
-        Yaw_Rx_Cache.acceleration * scale * rad_to_deg;
-
-    Rx_Pitch_Acceleration =
-        Pitch_Rx_Cache.acceleration * scale * rad_to_deg;
-
-    Fire = (Yaw_Rx_Cache.mode >> 1) & 0x01;
-    Control = (Yaw_Rx_Cache.mode >> 2) & 0x01;
-
-    alive = Control;
-
-    Math_Constrain(&Rx_Angle_Pitch, -20.0f, 25.0f);
+  // CAN通信的数据处理
+  float tmp_yaw, tmp_pitch;
+  // // 将CAN接收到的数据转换为实际值 (除以1000转换回浮点数)
+  // float target_x = Pack_Rx.target_x / 1000.0f;
+  // float target_y = Pack_Rx.target_y / 1000.0f;    
+  // float target_z = Pack_Rx.target_z / 1000.0f;
+  tmp_yaw = Pack_Rx.yaw /10000.0f;
+  tmp_pitch = Pack_Rx.pitch /10000.0f;
+  Fire = Pack_Rx.Fire;
+  alive = Pack_Rx.alive;
+  
+  // Self_aim(target_x, target_y, target_z + camera_distance, &tmp_yaw, &tmp_pitch, &Distance);
+  // Self_aim(target_x, target_y, target_z, &tmp_yaw, &tmp_pitch, &Distance);
+  Rx_Angle_Pitch = tmp_pitch * 180 / PI;
+  Rx_Angle_Yaw = tmp_yaw * 180 / PI;
+  Math_Constrain(&Rx_Angle_Pitch, -20.0f, 25.0f);
 }
 
 /**
@@ -319,55 +306,15 @@ float Class_MiniPC::meanFilter(float input)
  *
  * @param rx_data 接收的数据
  */
-static int16_t MiniPC_Read_Int16_LE(const uint8_t *data)
+void Class_MiniPC::CAN_RxCpltCallback(uint8_t *rx_data)
 {
-    uint16_t value;
-
-    value = (uint16_t)data[0];
-    value |= ((uint16_t)data[1] << 8);
-
-    return (int16_t)value;
-}
-void Class_MiniPC::CAN_RxCpltCallback(uint32_t can_id,const uint8_t *rx_data)
-{
-    if (rx_data == NULL)
-  {
-      return;
-  }
-      debug_can_id = can_id;
-      debug_rx0 = rx_data[0];
-      debug_rx1 = rx_data[1];
-  uint8_t axis = rx_data[0] & 0x01;//axis=0：yaw , axis=1：pitch
-  Struct_MiniPC_Axis_Rx_Cache *cache = NULL;
-    if ((can_id == 0xA2) && (axis == 0)) 
-  {
-      cache = &Yaw_Rx_Cache;//0xA2 必须对应 axis=0
-  }
-  else if ((can_id == 0xA3) && (axis == 1))
-  {
-      cache = &Pitch_Rx_Cache;//0xA3 必须对应 axis=1
-  }
-  else
-  {
-      return;//如果算法发送错了，直接丢弃这一帧
-  }
-  //解析8字节数据
-  cache->mode = rx_data[0];
-  cache->seq = rx_data[1];
-
-  cache->angle = MiniPC_Read_Int16_LE(&rx_data[2]);
-
-  cache->velocity = MiniPC_Read_Int16_LE(&rx_data[4]);
-
-  cache->acceleration = MiniPC_Read_Int16_LE(&rx_data[6]);
-
-  cache->new_data = 1;
-
-  Data_Process();
-
-  Flag += 1;
-
-  Yaw_Rx_Cache.new_data = 0;
-  Pitch_Rx_Cache.new_data = 0;
-
+    // 滑动窗口, 判断迷你主机是否在线
+    Flag += 1;
+    
+    // 直接将接收到的数据复制到结构体
+    memcpy(&Pack_Rx, rx_data, 6);
+    //memcpy(&Pack_Rx_test, rx_data, sizeof(Pack_Rx_test));
+    // 处理数据
+    Data_Process();
+  
 }

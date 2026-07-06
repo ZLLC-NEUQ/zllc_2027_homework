@@ -432,6 +432,7 @@ public:
     void CAN_RxCpltCallback(uint8_t *Rx_Data);
     void TIM_Alive_PeriodElapsedCallback();
     void TIM_PID_PeriodElapsedCallback();
+    void Output();
 
     float v;
     float init_v = 0.0f;
@@ -500,7 +501,6 @@ protected:
     //内部函数
 
     void Data_Process();
-    void Output();
 };
 
 

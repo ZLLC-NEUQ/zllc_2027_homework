@@ -271,30 +271,6 @@ void Class_Tricycle_Chassis::Speed_Resolution()
         {
             Math_Constrain(&Target_Omega, -Omega_Max, Omega_Max);
         }
-
-// #ifdef SPEED_SLOPE
-//         // 速度换算，正运动学分解
-//         float motor1_temp_linear_vel = Slope_Velocity_Y.Get_Out() - Slope_Velocity_X.Get_Out() + Slope_Omega.Get_Out() * (HALF_WIDTH + HALF_LENGTH);
-//         float motor2_temp_linear_vel = Slope_Velocity_Y.Get_Out() + Slope_Velocity_X.Get_Out() - Slope_Omega.Get_Out() * (HALF_WIDTH + HALF_LENGTH);
-//         float motor3_temp_linear_vel = Slope_Velocity_Y.Get_Out() + Slope_Velocity_X.Get_Out() + Slope_Omega.Get_Out() * (HALF_WIDTH + HALF_LENGTH);
-//         float motor4_temp_linear_vel = Slope_Velocity_Y.Get_Out() - Slope_Velocity_X.Get_Out() - Slope_Omega.Get_Out() * (HALF_WIDTH + HALF_LENGTH);
-// #else
-//         // 速度换算，正运动学分解
-//         float motor1_temp_linear_vel = Target_Velocity_Y - Target_Velocity_X + Target_Omega * (HALF_WIDTH + HALF_LENGTH);
-//         float motor2_temp_linear_vel = Target_Velocity_Y + Target_Velocity_X - Target_Omega * (HALF_WIDTH + HALF_LENGTH);
-//         float motor3_temp_linear_vel = Target_Velocity_Y + Target_Velocity_X + Target_Omega * (HALF_WIDTH + HALF_LENGTH);
-//         float motor4_temp_linear_vel = Target_Velocity_Y - Target_Velocity_X - Target_Omega * (HALF_WIDTH + HALF_LENGTH);
-// #endif
-//         // 线速度 cm/s  转角速度  RAD
-//         float motor1_temp_rad = motor1_temp_linear_vel * VEL2RAD;
-//         float motor2_temp_rad = motor2_temp_linear_vel * VEL2RAD;
-//         float motor3_temp_rad = motor3_temp_linear_vel * VEL2RAD;
-//         float motor4_temp_rad = motor4_temp_linear_vel * VEL2RAD;
-//         // 角速度*减速比  设定目标 直接给到电机输出轴
-//         Motor_Wheel[0].Set_Target_Omega_Radian(motor2_temp_rad);
-//         Motor_Wheel[1].Set_Target_Omega_Radian(-motor1_temp_rad);
-//         Motor_Wheel[2].Set_Target_Omega_Radian(-motor3_temp_rad);
-//         Motor_Wheel[3].Set_Target_Omega_Radian(motor4_temp_rad);
         True_Vx[0] = True_Vx[1] = Slope_Velocity_X.Get_Out() - Target_Omega * half_length;
         True_Vx[2] = True_Vx[3] = Slope_Velocity_X.Get_Out() + Target_Omega * half_length;
 
@@ -478,6 +454,78 @@ void Class_Tricycle_Chassis::Stree_Angle_Resolution()
     }
 }
 
+void Class_Tricycle_Chassis::Slip_Detection()
+{
+    for(int i = 0; i < 4; i++)
+    {
+        float target_omega = Motor_Wheel[i].Get_Target_Omega_Radian();
+        float current_omega = Motor_Wheel[i].Get_Now_Omega_Radian();
+
+        if (fabs(target_omega) > 0.1f)
+        {
+            Slip_Ratio[i] = (target_omega - current_omega) / target_omega;
+        }
+        else{
+            Slip_Ratio[i] = 0.0f;
+        }
+
+        float slip_threshold = 0.0f;
+        if (fabs(Slip_Ratio[i]) > slip_threshold)
+        {
+            float slip_factor = 1.0f - (fabs(Slip_Ratio[i]) - slip_threshold) * 0.5f;
+            Math_Constrain(&slip_factor, 0.1f, 1.0f);
+
+            float current_out = Motor_Wheel[i].Get_Out();
+            Motor_Wheel[i].Set_Out(current_out * slip_factor);
+        }
+    }
+}
+
+void Class_Tricycle_Chassis::Speed_Kalman()
+{
+    if (IMU == nullptr)
+        return;
+
+    float vx = 0.0f, vy = 0.0f;
+    for (int i = 0; i < 4; i++)
+    {
+        float omega = Motor_Wheel[i].Get_Now_Omega_Radian();
+        float angle = Motor_Steer[i].Get_Now_Zero_Offset_Radian();
+        vx += omega * WHEEL_RADIUS * cosf(angle);
+        vy += omega * WHEEL_RADIUS * sinf(angle);
+    }
+    vx /= 4.0f;
+    vy /= 4.0f;
+
+    float imu_acc_x = IMU->Get_Accel_X();
+    float imu_acc_y = IMU->Get_Accel_Y();
+    float imu_gyro_z = IMU->Get_Gyro_Yaw();
+
+    Kalman_Measure[0] = vx;
+    Kalman_Measure[1] = vy;
+    Kalman_Measure[2] = imu_acc_x;
+    Kalman_Measure[3] = imu_acc_y;
+    Kalman_Measure[4] = Now_Omega;
+    Kalman_Measure[5] = imu_gyro_z;
+
+    Chassis_Speed_Kalman.MeasuredVector = Kalman_Measure;
+
+    float *filtered = Kalman_Filter_Update(&Chassis_Speed_Kalman, nullptr);
+    
+    if (filtered != nullptr)
+    {
+        Now_Velocity_X = filtered[0];
+        Now_Velocity_Y = filtered[1];
+        Now_Omega = filtered[4];
+
+        Kalman_State[0] = filtered[0];
+        Kalman_State[1] = filtered[1];
+        Kalman_State[2] = filtered[2];
+        Kalman_State[3] = filtered[3];
+        Kalman_State[4] = filtered[4];
+        Kalman_State[5] = filtered[5];
+    }
+}
 //Enum_Supercap_Mode test_mode = Supercap_Mode_ENABLE;
 float test_power = 58.0f;
 float compensate_max_power = 30.0f;
@@ -503,7 +551,9 @@ void Class_Tricycle_Chassis::TIM_Calculate_PeriodElapsedCallback(Enum_Sprint_Sta
 
     // 速度解算
     Speed_Resolution();
+    Speed_Kalman();
     Stree_Angle_Resolution();
+    Slip_Detection();
 
     // float Chassis_Buffer = 0.0;
     //计算限制功率
@@ -588,6 +638,7 @@ void Class_Tricycle_Chassis::TIM_Calculate_PeriodElapsedCallback(Enum_Sprint_Sta
     memcpy(CAN_Supercap_Tx_Data,&power,4);
     uint8_t tmp = (uint8_t)SuperCap;
     memcpy(CAN_Supercap_Tx_Data+4,&tmp,1);
+    
 
 }
 

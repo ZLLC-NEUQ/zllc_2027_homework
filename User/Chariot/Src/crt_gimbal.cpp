@@ -19,6 +19,9 @@
 
 /* Private variables ---------------------------------------------------------*/
 
+float YAW_Reference_Angle = 0.0f;
+float YAW_Chassis_Angle = 0.0f;
+
 /* Private function declarations ---------------------------------------------*/
 
 /* Function prototypes -------------------------------------------------------*/

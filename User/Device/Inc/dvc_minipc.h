@@ -216,17 +216,17 @@ struct Pack_tx_t
  * @brief 接收数据包
  *
  */
-struct Struct_MiniPC_Axis_Rx_Cache
+struct Pack_rx_t
 {
-    uint8_t mode;
-    uint8_t seq;
-
-    int16_t angle;
-    int16_t velocity;
-    int16_t acceleration;
-
-    uint8_t new_data;
-};
+    // int16_t target_x;
+    // int16_t target_y;
+    // int16_t target_z;
+    // int8_t  Fire;
+    uint8_t alive;
+    uint8_t Fire;
+    int16_t yaw;
+    int16_t pitch;
+} __attribute__((packed));
 
 
 /**
@@ -286,7 +286,7 @@ public:
 
     float meanFilter(float input);
 
-    void CAN_RxCpltCallback(uint32_t can_id, const uint8_t *rx_data);
+    void CAN_RxCpltCallback(uint8_t *rx_data);
     void TIM1msMod50_Alive_PeriodElapsedCallback();
     void TIM_Write_PeriodElapsedCallback();
 
@@ -324,8 +324,7 @@ protected:
     Struct_MiniPC_Rx_Data Data_NUC_To_MCU;
    
     Pack_tx_t Pack_Tx_CAN;
-    Struct_MiniPC_Axis_Rx_Cache Yaw_Rx_Cache = {};
-    Struct_MiniPC_Axis_Rx_Cache Pitch_Rx_Cache = {};
+    Pack_rx_t Pack_Rx;
 
     float Tx_Angle_Roll;
     float Tx_Angle_Pitch;
@@ -336,15 +335,8 @@ protected:
     float Rx_Angle_Pitch;
     float Rx_Angle_Yaw;
 
-     float Rx_Yaw_Velocity = 0.0f;
-    float Rx_Pitch_Velocity = 0.0f;
-
-    float Rx_Yaw_Acceleration = 0.0f;
-    float Rx_Pitch_Acceleration = 0.0f;
-
-    uint8_t Fire = 0;
-    uint8_t Control = 0;
-    uint8_t alive = 0;
+    uint8_t Fire;
+    uint8_t alive;
 
     const float g = 9.8;         // 重力加速度
     const float bullet_v = 21.7; // 子弹速度
@@ -676,4 +668,3 @@ void Class_MiniPC::Transform_Angle_Tx()
 #endif
 
 /************************ COPYRIGHT(C) USTC-ROBOWALKER **************************/
-
