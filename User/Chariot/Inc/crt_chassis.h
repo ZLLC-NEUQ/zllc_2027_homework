@@ -23,11 +23,32 @@
 #include "alg_slope.h"
 #include "dvc_referee.h"
 #include "dvc_djimotor.h"
+#include "dvc_dmmotor.h"
+#include "dvc_lkmotor.h"
 #include "alg_new_power_limit.h"
 #include "dvc_supercap.h"
 #include "config.h"
+#include "dvc_minipc.h"
+#include "drv_math.h"
+#include "kalman_filter.h"
 /* Exported macros -----------------------------------------------------------*/
+#define wheel_diameter 0.12f   // 驱动轮直径，m
+#define half_length 0.178f           // 轮距的一半，m
 
+
+#define R_DIST (half_length * 1.414f) // 旋转中心与四个舵轮的距离
+
+
+#define PI 3.141593f
+#define PI2 (2 * PI)
+#define RPM_TO_RAD (PI2 / 60)                // 将转速(RPM)转换为角速度(rad/s)  1 rpm = 2pi/60 rad/s
+#define RPM_TO_VEL (PI * wheel_diameter / 60)  // 将转速(RPM)转换为轮子线速度(cm/s)  vel = rpm*pi*D/60  m/s
+#define VEL_TO_RPM (1 / RPM_TO_VEL)            // 将轮子线速度(m/s)转换为转速(RPM)
+#define M2006_REDUCTION_RATIO 36.000000f     // 定义M2006电机的减速比
+#define M3508_REDUCTION_RATIO 15.76f     // 定义M3508电机的减速比
+#define MF7025_ENCODER_ANGLE 4096.0f         // 定义MF7025电机编码器每圈脉冲数
+
+#define RAD_TO_4096 (4096.0f / PI / 2.0f)      // 将弧度值转换为编码器计数值
 /* Exported types ------------------------------------------------------------*/
 
 /**
@@ -50,6 +71,7 @@ enum Enum_Chassis_Control_Type : uint8_t
     Chassis_Control_Type_FLLOW,
     Chassis_Control_Type_SPIN,
     Chassis_Control_Type_ANTI_SPIN,
+    Chassis_Control_Type_Drive,
 };
 
 /**
@@ -60,6 +82,9 @@ enum Enum_Chassis_Control_Type : uint8_t
 class Class_Tricycle_Chassis
 {
 public:
+    
+    Class_IMU *IMU;
+    Class_LK_Motor *Motor_Yaw;
     // 斜坡函数加减速速度X
     Class_Slope Slope_Velocity_X;
     // 斜坡函数加减速速度Y
@@ -82,6 +107,7 @@ public:
 
     // 下方转动电机
     Class_DJI_Motor_C620 Motor_Wheel[4];
+    Class_DJI_Motor_C620_Steer Motor_Steer[4];
 
     void Init(float __Velocity_X_Max = 7.0f, float __Velocity_Y_Max = 7.0f, float __Omega_Max = 24.0f, float __Steer_Power_Ratio = 0.5);
 
@@ -134,6 +160,16 @@ protected:
 
     // 内部变量
 
+    //内部变量
+    float Relative_Angle = 0.0f;
+
+    //舵向电机目标值
+    float Target_Steer_Angle[4];
+    //驱动电机目标值
+    float Target_Wheel_Omega[4];
+    //驱动电机扭矩
+    float Target_Wheel_Torque[4];
+
     // 读变量
 
     // 当前总功率
@@ -168,6 +204,21 @@ protected:
 
     // 内部函数
     void Speed_Resolution();
+    void Stree_Angle_Resolution();
+    void Slip_Detection();
+    void Speed_Kalman();
+
+    Class_PID PID_Omega;
+    Class_PID PID_Velocity_X;
+    Class_PID PID_Velocity_Y;
+
+
+    float Slip_Ratio[4];
+    KalmanFilter_t Chassis_Speed_Kalman;
+
+    float Kalman_State[6];//当前
+    float Kalman_Predict[6];//预测
+    float Kalman_Measure[6];//向量
 };
 
 /* Exported variables --------------------------------------------------------*/

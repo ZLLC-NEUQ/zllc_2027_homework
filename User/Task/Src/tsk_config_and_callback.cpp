@@ -171,6 +171,35 @@ void Chassis_Device_CAN2_Callback(Struct_CAN_Rx_Buffer *CAN_RxMessage)
 void Chassis_Device_CAN3_Callback(Struct_CAN_Rx_Buffer *CAN_RxMessage)
 {
 
+    can[2]++;
+    switch (CAN_RxMessage->Header.Identifier)
+    {
+        case(0xD1):
+        {
+            chariot.Chassis.Motor_Steer[0].MA600_Data_Process(CAN_RxMessage);
+        }
+        break;
+        case(0xD2):
+        {
+            chariot.Chassis.Motor_Steer[1].MA600_Data_Process(CAN_RxMessage);
+        }
+        break;
+        case(0xD3):
+        {
+            chariot.Chassis.Motor_Steer[2].MA600_Data_Process(CAN_RxMessage);
+        }
+        break;
+        case(0xD4):
+        {
+            chariot.Chassis.Motor_Steer[3].MA600_Data_Process(CAN_RxMessage);
+        }   
+        break;
+        case (0x67)://超电接收
+        {
+            chariot.Chassis.Supercap.CAN_RxCpltCallback(CAN_RxMessage->Data);
+        }
+        break;        
+    }
 }
 #endif
 
@@ -194,10 +223,20 @@ void Gimbal_Device_CAN1_Callback(Struct_CAN_Rx_Buffer *CAN_RxMessage)
 			chariot.Booster.Motor_Friction_Right.CAN_RxCpltCallback(CAN_RxMessage->Data);
 		}
 		break;
+         case(0x203):
+		{
+			chariot.Booster.Motor_Friction_Down.CAN_RxCpltCallback(CAN_RxMessage->Data);
+		}
+		break;
         case (0xa1):
         {
-            chariot.MiniPC.CAN_RxCpltCallback(CAN_RxMessage->Data);
+            chariot.MiniPC.CAN_RxCpltCallback(CAN_RxMessage->Header.Identifier, CAN_RxMessage->Data);
         }
+        break;
+        case(0xA2):
+        {				
+            chariot.Gimbal.Motor_Pitch_2.CAN_RxCpltCallback(CAN_RxMessage->Data);
+		}
         break;
 	}
 }

@@ -83,6 +83,10 @@ void Class_Supercap::Init_UART(UART_HandleTypeDef *__huart, uint8_t __fame_heade
     {
         UART_Manage_Object = &UART6_Manage_Object;
     }
+        else if (__huart->Instance == USART10)
+    {
+        UART_Manage_Object = &UART10_Manage_Object;
+    }
     Supercap_Status = Supercap_Status_DISABLE;
     Supercap_Tx_Data.Limit_Power = __Limit_Power_Max;
     UART_Manage_Object->UART_Handler = __huart;
