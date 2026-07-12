@@ -287,12 +287,15 @@ void Class_Chariot::CAN_Gimbal_Tx_Chassis_Callback()
     // 修改control_type，将Fric_Status替换为gimbal_control_type
     control_type = (uint8_t)(Referee_UI_Refresh_Status << 7 | MiniPC_Status << 6 | booster_user_control << 5 | gimbal_control_type << 3 | Sprint_Status << 2 | chassis_control_type);
     // 设定速度
+    //把多个变量塞进一个 8 字节的 CAN 数据数组:[0~1]X速度， [2~3]Y速度， [4]角速度， [5~6]Pitch, [7]control_type
+    //memcpy(目标地址, 源变量地址, 复制字节数)
+    //sizeof(uint16_t)等于2字节 , sizeof(uint8_t)等于1字节
     tmp_chassis_velocity_x = Math_Float_To_Int(chassis_velocity_x, -1 * Chassis.Get_Velocity_X_Max(), Chassis.Get_Velocity_X_Max(), 0, 0x7FFF);
-    memcpy(CAN2_Gimbal_Tx_Chassis_Data, &tmp_chassis_velocity_x, sizeof(uint16_t));
-
+    memcpy(CAN2_Gimbal_Tx_Chassis_Data, &tmp_chassis_velocity_x, sizeof(uint16_t));//把 tmp_chassis_velocity_x 的两个字节复制到CAN2_Gimbal_Tx_Chassis_Data[0]和[1]
+    //CAN2_Gimbal_Tx_Chassis_Data + 2等价于&CAN2_Gimbal_Tx_Chassis_Data[2]，表示从数组第 2 个字节开始写
     tmp_chassis_velocity_y = Math_Float_To_Int(chassis_velocity_y, -1 * Chassis.Get_Velocity_Y_Max(), Chassis.Get_Velocity_Y_Max(), 0, 0x7FFF);
     memcpy(CAN2_Gimbal_Tx_Chassis_Data + 2, &tmp_chassis_velocity_y, sizeof(uint16_t));
-
+ 
     tmp_chassis_omega = Math_Float_To_Int(chassis_omega, -1 * 8.0f, 8.0f, 0, 0xFF);
     memcpy(CAN2_Gimbal_Tx_Chassis_Data + 4, &tmp_chassis_omega, sizeof(uint8_t));
 
@@ -1093,10 +1096,21 @@ void Class_Chariot::TIM_Calculate_PeriodElapsedCallback()
     mod2++;
     if (mod2 == 2)
     {
+            if (Sprint_Status == Sprint_Status_ENABLE)
+        {
+            Chassis.Supercap.Set_Supercap_Usage_Stratage(Supercap_Usage_Stratage_Supercap_BufferPower);
+        }
+            else
+        {
+            Chassis.Supercap.Set_Supercap_Usage_Stratage(Supercap_Usage_Stratage_Referee_BufferPower);
+        }
+        // 先更新允许功率
+         Chassis.Supercap.TIM_Supercap_PeriodElapsedCallback();
+         //进行底盘解算和功率限制
         Chassis.TIM_Calculate_PeriodElapsedCallback(Sprint_Status);
         mod2 = 0;
     }
-
+    
     // 底盘解算任务
 
 #elif defined(GIMBAL)
@@ -1332,8 +1346,8 @@ void Class_Chariot::TIM1msMod50_Alive_PeriodElapsedCallback()
         }
 
         Gimbal.Motor_Pitch.TIM_Alive_PeriodElapsedCallback();
+        Gimbal.Motor_Pitch_2.TIM_Alive_PeriodElapsedCallback();
         Gimbal.Motor_Yaw.TIM_Alive_PeriodElapsedCallback();
-        Gimbal.Motor_Pitch_LK6010.TIM_Alive_PeriodElapsedCallback();
         Gimbal.Boardc_BMI.TIM1msMod50_Alive_PeriodElapsedCallback();
 
         Booster.Motor_Driver.TIM_Alive_PeriodElapsedCallback();

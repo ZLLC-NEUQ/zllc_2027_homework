@@ -792,7 +792,7 @@ void Class_Steering_Wheel_Chassis::TIM_Calculate_PeriodElapsedCallback(Enum_Spri
         Power_Management.Motor_Data[i + 4].torque          = Motor_Steer[i].Get_Out() * M3508_CMD_CURRENT_TO_TORQUE;
         Power_Management.Motor_Data[i + 4].pid_output      = Motor_Steer[i].Get_Out();  
     }
-
+    
     Power_Limit.Power_Task(Power_Management);
 
     for (int i = 0; i < 4; i++)
