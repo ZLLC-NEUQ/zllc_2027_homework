@@ -405,6 +405,9 @@ void TIM_CAN_PeriodElapsedCallback()
 		//CAN_Send_Data(&hfdcan2, 0xf1, CAN2_0xxf1_Tx_Data, 8);
         mod2 = 0;
     } 
+
+    // 周期发送 LK7025 Yaw 控制指令
+    CAN_Send_Data(&hfdcan2, 0x141, CAN2_0x141_Tx_Data, 8);
     
     if (mod10 == 10) //100Hz
     {

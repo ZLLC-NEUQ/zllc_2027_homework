@@ -337,7 +337,7 @@ void Class_LK_Motor::TIM_Alive_PeriodElapsedCallback()
     //判断该时间段内是否接收过电机数据
     if (Flag == Pre_Flag)
     {
-        //电机断开连接
+        //一段时间内没收到新的 0x141，就判定 yaw 离线
         LK_Motor_Status = LK_Motor_Status_DISABLE;
     }
     else

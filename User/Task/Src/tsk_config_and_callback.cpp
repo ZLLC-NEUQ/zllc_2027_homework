@@ -213,6 +213,14 @@ void Gimbal_Device_CAN1_Callback(Struct_CAN_Rx_Buffer *CAN_RxMessage)
 		}
 		break;
 
+        case (0xA2):
+        {
+            chariot.Gimbal.Motor_Pitch_2.CAN_RxCpltCallback(
+                CAN_RxMessage->Data
+            );
+        }
+        break;
+        
         case (0xA3): // 算法板yaw包
         
         case (0xA4): // 算法板pitch包
