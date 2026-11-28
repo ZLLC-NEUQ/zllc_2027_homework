@@ -1,0 +1,62 @@
+题目九 CAN 配置说明：DM-MC02 接收 C620 电调反馈数据
+=====================================================
+
+1. 硬件平台
+   DM-MC02 控制板（MCU：STM32H723VGT6，Cortex-M7），
+   板载 SIT1042 CAN 收发器。
+
+2. 使用外设
+   FDCAN1，正常模式（FDCAN_MODE_NORMAL，非环回、非静默）。
+   控制器初始化 FrameFormat = FDCAN_FRAME_FD_BRS；FDCAN 控制器在该
+   模式下向后兼容经典 CAN 2.0 帧，C620 反馈为经典 CAN 帧，接收时
+   在中断回调中校验 rx_header.FDFormat == FDCAN_CLASSIC_CAN。
+   本题只接收、不发送任何 CAN 报文。
+
+3. 引脚（以达妙官方 FDCAN 例程为准，非 CubeMX 默认引脚）
+   PD0 = FDCAN1_RX，PD1 = FDCAN1_TX，复用功能 AF9，GPIO 无上下拉。
+
+4. 时钟
+   HSE 板载晶振 = 24MHz，PLL 源选 HSE；
+   SYSCLK = 480MHz（PLLM=2, PLLN=40, PLLP=1）；
+   FDCAN 内核时钟 = 80MHz，来源 PLL1Q（PLLQ=6，480MHz/6=80MHz）。
+
+5. 标称位时序（经典帧波特率由此组参数决定）
+   NominalPrescaler = 1
+   NominalTimeSeg1 = 59 tq
+   NominalTimeSeg2 = 20 tq
+   NominalSyncJumpWidth = 20 tq
+   每位总时间片 = 1 + 59 + 20 = 80 tq
+
+6. 波特率验算
+   80MHz / 1 / 80 = 1Mbps
+   采样点 = (1 + 59) / 80 = 75%
+
+7. 帧格式
+   11 位标准帧、数据帧、DLC = 8。
+   C620 反馈帧 ID = 0x200 + 电调ID（电调ID 1~8），即 0x201~0x208。
+
+8. 过滤器（硬件层过滤）
+   FDCAN1 标准过滤器0：FDCAN_FILTER_RANGE 范围模式，
+   FilterID1 = 0x201，FilterID2 = 0x208，命中送 RXFIFO0。
+   全局过滤：未命中过滤器的标准帧/扩展帧一律拒绝（FDCAN_REJECT），
+   远程帧一律拒绝（FDCAN_REJECT_REMOTE）。
+
+9. 中断
+   NVIC 使能 FDCAN1_IT0（line0），抢占优先级0；
+   HAL_FDCAN_Start 后 ActivateNotification(FDCAN_IT_RX_FIFO0_NEW_MESSAGE)。
+   回调 HAL_FDCAN_RxFifo0Callback 中 while 循环把 FIFO0 取空，
+   对每帧检查：ID范围 0x201~0x208、经典帧、数据帧、DLC=8，
+   四项全合法才解包，否则 reject_count++。
+
+10. 数据域解包（8 字节，16位字段均为大端：高字节在前）
+    DATA[0..1] 角度 uint16，原始值 0~8191（对应 0~360°）
+    DATA[2..3] 转速 int16，有符号，单位 RPM
+    DATA[4..5] 转矩电流 int16，有符号，保留协议原始值
+    DATA[6]    温度 uint8，单位 ℃
+    DATA[7]    Null/保留，不赋予含义
+    有符号数：拼成 uint16 后强转 (int16_t) 读取负数。
+
+11. 总线物理层
+    CAN_H/CAN_L 直连 C620，DM-MC02 与 C620 共 GND；
+    总线两端各一个 120Ω 终端电阻（共2个），
+    断电量 CAN_H 与 CAN_L 之间约 60Ω 为正常。
