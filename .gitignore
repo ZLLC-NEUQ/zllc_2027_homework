@@ -1,0 +1,7 @@
+﻿# build outputs
+build/
+MDK-ARM/build/
+MDK-ARM/.cmsis/
+*.uvguix.*
+*.map
+*.lst
